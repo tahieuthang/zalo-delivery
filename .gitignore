@@ -1,0 +1,7 @@
+.env
+.baml
+.baml.json
+.cursorignore
+.cursor
+dist
+node_modules
