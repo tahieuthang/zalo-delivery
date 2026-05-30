@@ -5,6 +5,7 @@ import logger from '@shared/logger/logger';
 import { prisma } from '@infra/database/prisma-client';
 import { redis } from '@infra/redis/redis-client';
 import { connectProducer, disconnectProducer } from '@infra/kafka/producer';
+import { initModules } from './routes';
 
 export async function createServer() {
   const app = createApp();
@@ -17,6 +18,10 @@ export async function createServer() {
   await redis.connect();
 
   await connectProducer();
+
+  // Initialize all business modules
+  await initModules();
+  logger.info('Business modules initialized');
 
   return { app, server };
 }

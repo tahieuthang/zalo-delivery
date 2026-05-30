@@ -1,12 +1,20 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
+import { router as webhookRouter, initModule as initWebhook } from '@modules/webhook';
+import { router as orderRouter, initModule as initOrder } from '@modules/order';
 
 export const router = Router();
 
 // Health check
-router.get('/health', (_req, res) => {
+router.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// TODO: Mount module routers here as modules are implemented
-// import { router as webhookRouter, initModule as initWebhook } from '@modules/webhook';
-// router.use(webhookRouter);
+// Mount module routers
+router.use(webhookRouter);
+router.use(orderRouter);
+
+// Initialize all modules
+export async function initModules(): Promise<void> {
+  await initWebhook();
+  await initOrder();
+}
