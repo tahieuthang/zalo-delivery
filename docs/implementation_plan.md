@@ -1,7 +1,7 @@
 # 🚀 Zalo-Delivery Backend — Implementation Plan
 
 > **Stack**: ExpressJS + TypeScript | PostgreSQL | Redis | Kafka | Socket.io | OSRM Docker
-> **Architecture**: Modular + Hexagonal Lite
+> **Architecture**: Module Architecture (Phẳng, mỗi module chứa controller/service/repository/dto/types)
 
 ---
 
@@ -43,7 +43,7 @@
 - Seed data cơ bản (shipper mẫu, config)
 
 > [!TIP]
-> **Gợi ý ORM**: Dùng **Drizzle ORM** thay Prisma. Lý do: type-safe 100%, SQL-like syntax, nhẹ hơn, không cần generate client, phù hợp hexagonal architecture hơn (dễ tách repository layer).
+> **Gợi ý ORM**: Dùng **Drizzle ORM** hoặc **Prisma**. Vì chúng ta dùng kiến trúc module phẳng, cả Prisma hay Drizzle đều hỗ trợ rất tốt việc tổ chức database client tập trung tại `infra/database/prisma-client.ts` và import trực tiếp vào `{module}.repository.ts`.
 
 ### Task 0.4: Shared infrastructure code
 - Logger (pino — nhanh hơn winston 5x)
@@ -53,10 +53,10 @@
 - Redis client singleton
 - Kafka producer/consumer factory
 
-### Task 0.5: Base Hexagonal structure
-- Tạo cấu trúc thư mục chuẩn (xem file cấu trúc thư mục riêng)
-- Setup barrel exports (`index.ts`) cho mỗi module
-- Base interfaces: `IRepository`, `IUseCase`, `IEventPublisher`
+### Task 0.5: Base Module structure
+- Tạo cấu trúc thư mục chuẩn (xem file `project_structure.md`)
+- Setup barrel exports (`index.ts`) cho mỗi module để export router và `initModule()`
+- Khởi tạo router aggregator tại `src/routes/index.ts`
 
 **✅ Acceptance**: `docker compose up` → tất cả services healthy, `pnpm dev` → server start không lỗi, kết nối được PG + Redis + Kafka.
 
@@ -71,7 +71,7 @@
 - Chỉ xử lý `user_send_text`, ignore phần còn lại
 
 ### Task 1.2: Redis dedup (chống trùng message)
-- Key pattern: `msg:dedup:{message_id}` với TTL 24h
+- Key pattern: `webhook:dedup:{message_id}` với TTL 24h
 - Flow: check EXISTS → nếu có thì skip, nếu không thì SET + xử lý
 - Dùng `SET NX EX` (atomic operation) thay vì GET rồi SET
 
@@ -90,7 +90,7 @@
 ### Task 1.4: Order creation
 - Validate parsed data (Zod)
 - Geocode địa chỉ → tọa độ (dùng Nominatim OSM hoặc Goong.io cho VN)
-- Insert order vào PostgreSQL với status `PENDING`
+- Insert order vào PostgreSQL với status `PENDING` thông qua `order.repository.ts`
 - Publish event `order.created` lên Kafka
 
 > [!TIP]
@@ -109,7 +109,7 @@
 - Khi offline → `ZREM shipper:locations {shipper_id}`
 
 ### Task 2.2: Nearest shipper finder
-- Nhận event `order.created` từ Kafka
+- Nhận event `order.created` từ Kafka trong `dispatcher.consumer.ts`
 - `GEORADIUS shipper:locations {order_lng} {order_lat} 3 km ASC`
 - Lọc shipper đang không có đơn active (check DB hoặc Redis set `shipper:busy`)
 - Trả về top 3-5 candidates
@@ -154,7 +154,7 @@
 - Hỗ trợ chạy nhiều shipper cùng lúc (Map<shipperId, intervalId>)
 
 ### Task 3.3: Server nhận GPS & update
-- Nhận `shipper:location_update` → update Redis GEOADD
+- Nhận `shipper:location_update` trong `tracking.socket.ts` → update Redis GEOADD
 - Broadcast location xuống room `order:{order_id}`
 - Log trajectory vào PostgreSQL (batch insert mỗi 10 points để giảm write)
 
@@ -191,9 +191,9 @@
 ## Phase 5 — Revenue Module & Kafka Integration (2-3 ngày)
 
 ### Task 5.1: Revenue consumer
-- Subscribe Kafka topic `revenue`
+- Subscribe Kafka topic `revenue` trong `revenue.consumer.ts`
 - Consumer group: `revenue-service`
-- Insert record vào bảng `revenue` (order_id, shipper_id, amount, type)
+- Insert record vào bảng `revenue` thông qua `revenue.repository.ts`
 - Update bảng `shippers.total_earnings`
 
 ### Task 5.2: Revenue API
@@ -218,7 +218,7 @@
 - Hoặc dùng **Scalar** (UI đẹp hơn Swagger UI nhiều)
 
 ### Task 6.2: Testing
-- Unit tests: Parser regex, Haversine calculation, business logic
+- Unit tests: Parser regex, Haversine calculation, business logic trong service (`{module}.service.test.ts`)
 - Integration tests: Webhook flow end-to-end (supertest)
 - Kafka tests: mock producer/consumer
 
@@ -251,6 +251,5 @@
 ---
 
 ## 📎 Xem thêm
-- [02_project_structure.md](file:///C:/Users/tamai/.gemini/antigravity/brain/c33ca190-9fee-4e14-8ada-7010a7437620/artifacts/02_project_structure.md) — Cấu trúc thư mục chi tiết
-- [03_rules.md](file:///C:/Users/tamai/.gemini/antigravity/brain/c33ca190-9fee-4e14-8ada-7010a7437620/artifacts/03_rules.md) — Coding rules & conventions
-- [04_skills.md](file:///C:/Users/tamai/.gemini/antigravity/brain/c33ca190-9fee-4e14-8ada-7010a7437620/artifacts/04_skills.md) — Bộ Skills gợi ý
+- [project_structure.md](file:///d:/My%20Project/zalo-delivery/docs/project_structure.md) — Cấu trúc thư mục chi tiết
+- [rules.md](file:///d:/My%20Project/zalo-delivery/docs/rules.md) — Coding rules & conventions

@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
+model Order {
+  id              String      @id
+  customerId      String      @map("customer_id")
+  pickupAddress   String      @map("pickup_address")
+  pickupLat       Float?      @map("pickup_lat")
+  pickupLng       Float?      @map("pickup_lng")
+  deliveryAddress String      @map("delivery_address")
+  deliveryLat     Float?      @map("delivery_lat")
+  deliveryLng     Float?      @map("delivery_lng")
+  status          OrderStatus @default(PENDING)
+  shipperId       String?     @map("shipper_id")
+  note            String?
+  completedAt     DateTime?   @map("completed_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  deletedAt       DateTime?   @map("deleted_at")
+
+  shipper  Shipper?        @relation(fields: [shipperId], references: [id])
+  revenues RevenueRecord[]
+  messages MessageLog[]
+
+  @@index([status])
+  @@index([shipperId])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING
+  ASSIGNED
+  DELIVERING
+  SUCCESS
+  FAILED
+  NO_SHIPPER
+}
+
+// ─── Shippers ─────────────────────────────────────────────────────────────────
+
+model Shipper {
+  id            String        @id
+  name          String
+  phone         String        @unique
+  vehicleType   String        @map("vehicle_type")
+  status        ShipperStatus @default(OFFLINE)
+  totalEarnings Float         @default(0) @map("total_earnings")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  deletedAt     DateTime?     @map("deleted_at")
+
+  orders   Order[]
+  revenues RevenueRecord[]
+
+  @@index([status])
+  @@map("shippers")
+}
+
+enum ShipperStatus {
+  ONLINE
+  OFFLINE
+  BUSY
+}
+
+// ─── Messages Log ─────────────────────────────────────────────────────────────
+
+model MessageLog {
+  id          String   @id
+  messageId   String   @unique @map("message_id")
+  senderId    String   @map("sender_id")
+  rawText     String   @map("raw_text")
+  parsedOk    Boolean  @map("parsed_ok")
+  orderId     String?  @map("order_id")
+  parseError  String?  @map("parse_error")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@map("messages_log")
+}
+
+// ─── Revenue ──────────────────────────────────────────────────────────────────
+
+model RevenueRecord {
+  id          String   @id
+  orderId     String   @map("order_id")
+  shipperId   String   @map("shipper_id")
+  amount      Float
+  type        String   @default("delivery")
+  completedAt DateTime @map("completed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  shipper Shipper @relation(fields: [shipperId], references: [id])
+
+  @@index([shipperId])
+  @@map("revenue")
+}
