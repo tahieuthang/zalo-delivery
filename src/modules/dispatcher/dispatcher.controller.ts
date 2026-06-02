@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import * as dispatcherService from '@modules/dispatcher/dispatcher.service';
 import { ulid } from '@shared/utils/id-generator';
+import { validate } from '@shared/middleware/validate';
+import { ShipperResponseRequestDto } from '@modules/dispatcher/dispatcher.dto';
 
 export const dispatcherRouter = Router();
 
@@ -76,3 +78,30 @@ dispatcherRouter.post(
     }
   },
 );
+
+/**
+ * Handle shipper accept/reject responses.
+ * POST /api/dispatcher/respond
+ */
+dispatcherRouter.post(
+  '/respond',
+  validate(ShipperResponseRequestDto),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { orderId, shipperId, action } = req.body;
+      const result = await dispatcherService.handleShipperResponse(orderId, shipperId, action);
+      if (result.success) {
+        res.status(200).json({
+          data: {
+            message: `Shipper successfully responded with: ${action}`,
+          },
+        });
+      } else {
+        res.status(400).json({ error: result.error });
+      }
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+

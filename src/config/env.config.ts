@@ -25,6 +25,9 @@ const envSchema = z.object({
   ZALO_OA_ID: z.string().optional(),
   ZALO_APP_ID: z.string().optional(),
   ZALO_APP_SECRET: z.string().optional(),
+
+  // Notification Abstraction
+  NOTIFICATION_PROVIDER: z.enum(['console', 'zalo']).default('console'),
 });
 
 const parsed = envSchema.safeParse(process.env);

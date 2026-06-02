@@ -15,3 +15,9 @@ export const OrderAssignedEventSchema = z.object({
     timestamp: z.string().datetime(),
   }),
 });
+
+export const ShipperResponseRequestDto = z.object({
+  orderId: z.string(),
+  shipperId: z.string(),
+  action: z.enum(['accept', 'reject']),
+});
