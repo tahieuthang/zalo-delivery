@@ -127,3 +127,25 @@ export async function getOrderById(id: string): Promise<OrderResponse> {
     createdAt: order.createdAt.toISOString(),
   };
 }
+
+/**
+ * Assign a shipper to an order and update status to ASSIGNED.
+ */
+export async function assignOrder(orderId: string, shipperId: string): Promise<void> {
+  await orderRepo.update(orderId, {
+    status: 'ASSIGNED',
+    shipper: { connect: { id: shipperId } },
+  });
+  logger.info({ orderId, shipperId }, 'Order status updated to ASSIGNED in database');
+}
+
+/**
+ * Set order status to NO_SHIPPER when dispatch fails.
+ */
+export async function setOrderNoShipper(orderId: string): Promise<void> {
+  await orderRepo.update(orderId, {
+    status: 'NO_SHIPPER',
+  });
+  logger.warn({ orderId }, 'Order status updated to NO_SHIPPER in database');
+}
+
