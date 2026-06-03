@@ -147,7 +147,8 @@ export async function offerOrderToNextCandidate(orderId: string, correlationId: 
 
   // Lock order with pending key for 30s
   const pendingKey = `order:pending_accept:${orderId}`;
-  await redis.set(pendingKey, shipperId, 'EX', 30);
+  // Set lock TTL to 35s (5s buffer over the 30s business timeout) to prevent race condition with setTimeout
+  await redis.set(pendingKey, shipperId, 'EX', 35);
 
   // Store offer meta in Redis to retrieve later
   const offerMetaKey = `order:offer_meta:${orderId}`;

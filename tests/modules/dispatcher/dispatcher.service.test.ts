@@ -113,12 +113,12 @@ describe('Dispatcher Service Confirmation Flow (Phase 2.5)', () => {
       data: { status: 'WAITING_ACCEPTANCE' },
     });
 
-    // Verify pending accept lock set in Redis for 30s
+    // Verify pending accept lock set in Redis for 35s (with buffer)
     expect(redis.set).toHaveBeenCalledWith(
       'order:pending_accept:mock-order-id',
       'shipper-1',
       'EX',
-      30
+      35
     );
 
     // Verify Notification offer is sent
