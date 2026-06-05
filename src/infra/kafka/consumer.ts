@@ -15,7 +15,7 @@ export async function runConsumer(
 ): Promise<() => Promise<void>> {
   const consumer = createConsumer(groupId);
   await consumer.connect();
-  await consumer.subscribe({ topic, fromBeginning: false });
+  await consumer.subscribe({ topic, fromBeginning: true });
 
   await consumer.run({
     eachMessage: async ({ topic: t, partition, message }) => {

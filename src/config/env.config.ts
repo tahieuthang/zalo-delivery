@@ -28,6 +28,9 @@ const envSchema = z.object({
 
   // Notification Abstraction
   NOTIFICATION_PROVIDER: z.enum(['console', 'zalo']).default('console'),
+
+  // Socket
+  SOCKET_TOKEN: z.string().default('zalo-delivery-secret-token'),
 });
 
 const parsed = envSchema.safeParse(process.env);
