@@ -1,12 +1,12 @@
-# Kiến Trúc Kỹ Thuật Phase 2.5 — Shipper Confirmation Flow
+# 🛠️ Phase 2.5 Architecture: Shipper Confirmation Flow
 
-Tài liệu này trình bày chi tiết về luồng nghiệp vụ **Shipper Confirmation (Xác nhận đơn hàng)** và vai trò của các công nghệ trong kiến trúc hệ thống của **Phase 2.5** thuộc dự án Zalo Delivery Backend.
+Bản tài liệu này phân tích chi tiết **luồng xử lý xác nhận đơn hàng (Shipper Confirmation Flow)** của Phase 2.5 và vai trò của từng công nghệ trong **Tech Stack** để hiện thực hóa việc chào đơn hàng và nhận phản hồi chấp nhận hoặc từ chối từ tài xế.
 
 ---
 
-## 🏗️ Luồng Xử Lý Chi Tiết Từng Bước (Step-by-Step Flow)
+## 🔄 1. Luồng xử lý dữ liệu của Phase 2.5 (End-to-End Flow)
 
-Quy trình gán đơn tự động (Auto-Assign) của Phase 2 được nâng cấp thành luồng chào đơn kèm cơ chế xác nhận/từ chối từ shipper (Accept/Reject/Timeout). Luồng xử lý diễn ra chi tiết qua các bước sau:
+Sự nâng cấp từ luồng tự động gán đơn sang quy trình chào đơn kèm cơ chế phản hồi (Accept/Reject/Timeout) được vận hành mượt mà nhờ sự phối hợp của các cấu phần hệ thống:
 
 ```mermaid
 sequenceDiagram
@@ -29,7 +29,7 @@ sequenceDiagram
         Note over D, N: Quy trình chào đơn (Offer Flow)
         D->>R: Pop lấy ứng viên đầu tiên trong cache
         D->>P: Cập nhật đơn hàng: status = WAITING_ACCEPTANCE
-        D->>R: Thiết lập khóa Lock 30s (order:pending_accept:{orderId} = shipperId)
+        D->>R: Thiết lập khóa Lock 35s (order:pending_accept:{orderId} = shipperId)
         D->>R: Lưu trữ metadata đơn (order:offer_meta:{orderId})
         D->>N: notificationService.sendOrderOffer()
         N-->>S: Gửi tin nhắn chào đơn (Mock Console / Zalo OA)
@@ -54,35 +54,30 @@ sequenceDiagram
     end
 ```
 
----
-
-## 🛠️ Vai Trò Của Các Tech Stack Chính Trong Phase 2.5
-
-Mỗi công nghệ được sử dụng đóng vai trò quan trọng trong việc xây dựng luồng nghiệp vụ tin cậy, không nghẽn và có độ bền bỉ cao:
-
-### 1. Redis (Cache, State Sets, Locks & TTL)
-Redis đóng vai trò là **trung tâm quản lý trạng thái động và đồng bộ hóa thời gian thực** (Real-time State & Synchronization Hub):
-*   **Atomic Lock (`order:pending_accept:{orderId}`)**: Sử dụng TTL 30 giây làm chốt khóa nguyên tử. Nó đảm bảo **chỉ duy nhất một shipper** có quyền phản hồi đơn hàng tại một thời điểm, ngăn chặn tuyệt đối lỗi race condition (nhiều shipper cùng nhận một đơn).
-*   **Candidates Cache Queue (`order:candidates:{orderId}`)**: Lưu trữ danh sách ứng viên tiềm năng dạng JSON. Khi shipper trước từ chối, dispatcher chỉ việc pop ứng viên tiếp theo từ Redis thay vì phải quét lại Geo và gọi lại OSRM API, giúp **giảm thiểu 80% độ trễ (latency)** và tiết kiệm tài nguyên mạng.
-*   **State Tracker (`shipper:busy`)**: Theo dõi các shipper đang làm việc để loại trừ khỏi danh sách tìm kiếm.
-*   **Cooldown Manager (`shipper:cooldown:{shipperId}`)**: Sử dụng khóa tự động phân rã với TTL 900 giây (15 phút) làm bộ nhớ tạm, giúp hệ thống **tự động bỏ qua** shipper vừa từ chối đơn hàng mà không cần thực hiện truy vấn DB phức tạp.
-
-### 2. PostgreSQL & Prisma ORM
-Đóng vai trò là **Nguồn dữ liệu chuẩn duy nhất (Single Source of Truth)**:
-*   Đảm bảo tính nhất quán dữ liệu giao dịch của đơn hàng khi thay đổi trạng thái chuyển tiếp (`PENDING` ➔ `WAITING_ACCEPTANCE` ➔ `ASSIGNED`).
-*   Lưu trữ trường định danh duy nhất `zaloUserId` của shipper để phục vụ việc mapping và giao tiếp thật với Zalo OA ở các phase sau.
-
-### 3. Kafka (Event-driven Messaging)
-Đóng vai trò là **Bộ truyền tin phi liên kết (Decoupling & Event Pipeline)**:
-*   Khi shipper accept đơn hàng, hệ thống phát sự kiện `order.assigned` lên Kafka. Các module ăn theo (Geofencing, Live Simulator, Revenue) sẽ tiêu thụ sự kiện này một cách bất đồng bộ. Điều này giúp dispatcher giải phóng tài nguyên cực nhanh, phản hồi HTTP cho shipper trong vòng vài mili-giây mà không bị block bởi các tiến trình xử lý sau đó.
-
-### 4. OSRM (Open Source Routing Machine)
-Đóng vai trò là **Bộ não tính toán lộ trình tối ưu**:
-*   Tính toán khoảng cách di chuyển thực tế trên bản đồ đường bộ Việt Nam cùng thời gian lái xe dự kiến thay vì tính theo đường chim bay thẳng, mang lại độ chính xác tuyệt đối khi phân phối đơn.
-
-### 5. Strategy Pattern (TypeScript Architecture)
-Đóng vai trò là **Khung thiết kế trừu tượng linh hoạt**:
-*   Tách biệt hoàn toàn tầng giao tiếp tin nhắn thông qua `INotificationService`.
-*   Giúp dự án phát triển theo mô hình **Mock-first** tin cậy: toàn bộ core logic nghiệp vụ phức tạp được viết và unit test kỹ càng trên máy local thông qua Console Provider mà không cần phụ thuộc hay chờ đợi kết nối mạng / tài khoản Zalo OA thật của doanh nghiệp.
+### Chi tiết từng bước trong luồng:
+1.  **Tính toán và lập hàng đợi ứng viên (Candidate Queue Setup)**:
+    *   Khi có sự kiện `order.created`, hệ thống tìm kiếm shipper rảnh lân cận qua Redis Geo, lọc cooldown và dùng OSRM sắp xếp ứng viên theo thời gian di chuyển.
+    *   Cache toàn bộ danh sách đã lọc vào Redis key `order:candidates:{orderId}` để tránh tính toán lại khi shipper từ chối.
+2.  **Gửi Offer và Khóa đơn (Offer Flow & Lock)**:
+    *   Rút (pop) ứng viên tốt nhất ra khỏi hàng đợi. Cập nhật trạng thái đơn sang `WAITING_ACCEPTANCE`.
+    *   Tạo khóa Lock nguyên tử `order:pending_accept:{orderId}` lưu ID tài xế với TTL 35 giây (chứa 5 giây buffer tránh race condition) và kích hoạt đếm ngược 30 giây trên Node.js Event Loop.
+    *   Gửi thông báo chào đơn qua `notificationService`.
+3.  **Xử lý Chấp nhận (Accept Flow)**:
+    *   Khi tài xế chấp nhận trong thời gian hạn định, kiểm tra tính hợp lệ của Lock key.
+    *   Xóa Lock, xóa danh sách candidates cache và chuyển trạng thái đơn hàng sang `ASSIGNED`. Đánh dấu shipper bận (`shipper:busy`) và bắn sự kiện `order.assigned` lên Kafka.
+4.  **Xử lý Từ chối / Hết hạn (Reject & Timeout Flow)**:
+    *   Nếu tài xế từ chối hoặc hết 30 giây mà không phản hồi, Lock bị giải phóng.
+    *   Tài xế nhận đơn sẽ bị đưa vào danh sách cooldown (`shipper:cooldown:{shipperId}`) trong 15 phút.
+    *   Hệ thống tự động lấy ứng viên tiếp theo từ Redis candidates cache và tiếp tục gửi offer chào đơn.
 
 ---
+
+## 💻 2. Vai trò của Tech Stack chính trong Phase 2.5
+
+| Công nghệ | Vai trò chủ chốt trong Phase 2.5 | Tại sao lại quan trọng? |
+|---|---|---|
+| **Redis** | *Khóa Lock nguyên tử, Hàng đợi Candidates & Cooldown* | Khóa `order:pending_accept` đảm bảo chỉ một shipper được chấp nhận tại một thời điểm. Hàng đợi `order:candidates` lưu danh sách shipper giúp tiết kiệm **80% độ trễ** do không phải tính toán lại OSRM. Khóa `shipper:cooldown` tự phân rã bằng TTL giúp lọc shipper từ chối đơn hiệu quả. |
+| **PostgreSQL & Prisma** | *Nguồn dữ liệu chuẩn (Single Source of Truth)* | Đồng bộ trạng thái đơn hàng chính xác thông qua các bước chuyển đổi (`PENDING` $\rightarrow$ `WAITING_ACCEPTANCE` $\rightarrow$ `ASSIGNED`). Quản lý trường `zaloUserId` làm căn cứ gửi tin nhắn thật qua Zalo OA. |
+| **Kafka (Broker)** | *Truyền sự kiện bất đồng bộ khi gán đơn thành công* | Phát sự kiện `order.assigned` khi shipper đồng ý nhận đơn, giúp giải phóng tiến trình HTTP phản hồi nhanh cho tài xế và kích hoạt bất đồng bộ các module Geofencing, Revenue xử lý phía sau. |
+| **OSRM Engine** | *Bộ tính toán và tối ưu lộ trình* | Định tuyến đường đi thực tế để sắp xếp danh sách tài xế theo thời gian di chuyển, đảm bảo thứ tự offer tài xế là tối ưu nhất. |
+| **Strategy Pattern (TypeScript)** | *Kiến trúc trừu tượng cho thông báo* | Cho phép thiết lập luồng **Mock-first** qua `ConsoleNotificationService` để kiểm thử toàn bộ logic nghiệp vụ mà không cần phụ thuộc hay chờ kết nối thật đến Zalo OA API. |
