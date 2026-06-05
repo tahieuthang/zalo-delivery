@@ -137,7 +137,7 @@
 
 ---
 
-## Phase 2.5 — Shipper Confirmation Flow (4-5 ngày)
+## Phase 2.5 — Shipper Confirmation Flow (4-5 ngày) — ✅ HOÀN THÀNH 100%
 
 > **Mục tiêu**: Xây dựng toàn bộ business logic accept/reject/timeout cho shipper confirmation. Dùng **Notification abstraction + mock provider** để test offline, không cần kết nối Zalo thật. Real Zalo OA integration sẽ thực hiện ở Phase 6.
 
@@ -145,170 +145,29 @@
 > **Tại sao mock-first?** Các Phase 1-2 đều hoạt động self-contained (mock webhook POST, OSRM commented out, Kafka/Redis local). Phase 2.5 giữ đúng pattern này: toàn bộ core logic được test qua REST API + console log, không phụ thuộc tài khoản Zalo OA thật.
 
 ### Task 2.5.1: Notification Abstraction Layer (`infra/notification/`)
-
-Áp dụng **Strategy Pattern** — swap giữa mock và Zalo thật bằng env variable:
-
-```
-infra/notification/
-├── notification.interface.ts     ← Interface chung: sendOrderOffer(), sendStatusUpdate()
-├── console.notification.ts       ← Mock: log ra pino logger (dùng khi dev/test)
-└── zalo-oa.notification.ts       ← Real: gửi qua Zalo OA API (implement ở Phase 6)
-```
-
-**Interface định nghĩa:**
-```typescript
-interface INotificationService {
-  sendOrderOffer(shipper: ShipperInfo, order: OrderInfo): Promise<void>;
-  sendAcceptConfirm(shipper: ShipperInfo, order: OrderInfo): Promise<void>;
-  sendRejectConfirm(shipper: ShipperInfo, orderId: string): Promise<void>;
-  sendTimeoutNotice(shipper: ShipperInfo, orderId: string): Promise<void>;
-  sendDeliveringStatus(shipper: ShipperInfo, orderId: string): Promise<void>;
-  sendSuccessStatus(shipper: ShipperInfo, orderId: string): Promise<void>;
-}
-```
-
-**Chọn provider qua env:**
-```
-NOTIFICATION_PROVIDER=console    # dev/test (mặc định)
-NOTIFICATION_PROVIDER=zalo       # production (Phase 6)
-```
-
-- `console.notification.ts`: Log tin nhắn ra pino ở level `info` với tag `[NOTIFICATION]`
-- Factory function `createNotificationService()` trong `infra/notification/index.ts` trả về provider tương ứng
+- [x] Áp dụng **Strategy Pattern** — swap giữa mock và Zalo thật bằng env variable
+- [x] Định nghĩa Interface chung: `INotificationService`
+- [x] Implement Mock Provider: `ConsoleNotificationService` log ra pino logger
 
 ### Task 2.5.2: Bổ sung Database Schema
-
-**Prisma schema changes:**
-
-1. Thêm field `zaloUserId` vào model `Shipper`:
-   ```prisma
-   model Shipper {
-     // ... existing fields
-     zaloUserId  String?   @unique @map("zalo_user_id")
-   }
-   ```
-
-2. Thêm trạng thái mới vào enum `OrderStatus`:
-   ```prisma
-   enum OrderStatus {
-     PENDING
-     WAITING_ACCEPTANCE   // ← MỚI: Đang chờ shipper xác nhận
-     ASSIGNED
-     DELIVERING
-     SUCCESS
-     FAILED
-     NO_SHIPPER
-   }
-   ```
-
-3. Migration: `prisma migrate dev --name add-shipper-zalo-uid-and-waiting-status`
-4. API `PATCH /api/shippers/:id` cho phép cập nhật `zaloUserId` thủ công (chuẩn bị cho Phase 6)
+- [x] Thêm field `zaloUserId` vào model `Shipper`
+- [x] Thêm trạng thái mới `WAITING_ACCEPTANCE` vào enum `OrderStatus`
+- [x] Thực hiện migration database và cập nhật API `PATCH /api/shippers/:id` để gán `zaloUserId`
 
 ### Task 2.5.3: Refactor Dispatcher — Shipper Confirmation Flow
-
-Thay đổi flow chính trong `dispatcher.service.ts`:
-
-**Luồng mới (thay thế auto-assign):**
-
-```
-1. Dispatcher tìm candidates (giữ nguyên GEOSEARCH + OSRM sort)
-2. Lọc thêm: bỏ shipper có cooldown (shipper:cooldown:{id})
-3. Lưu toàn bộ sorted candidates → Redis key order:candidates:{orderId}
-4. Lấy candidate đầu tiên → gửi offer
-5. Update order: status = WAITING_ACCEPTANCE
-6. Lock order: SET order:pending_accept:{orderId} {shipperId} EX 30 NX
-7. Gọi notificationService.sendOrderOffer(shipper, order)  ← abstracted
-8. Khởi tạo timer 30s (setTimeout) → hết hạn = auto-reject
-```
-
-**Redis keys mới:**
-
-| Key | Value | TTL | Mục đích |
-|---|---|---|---|
-| `order:pending_accept:{orderId}` | `{shipperId}` | 30s | Lock order — chỉ 1 shipper được offer tại 1 thời điểm |
-| `shipper:cooldown:{shipperId}` | `"1"` | 900s (15 phút) | Treo shipper sau khi reject |
-| `order:candidates:{orderId}` | JSON array `[{shipperId, duration, ...}]` | 300s | Cache danh sách candidates đã sort |
-
-> [!TIP]
-> **Tối ưu**: Lưu candidates vào Redis để khi bị reject, không cần gọi lại GEOSEARCH + OSRM mà chỉ lấy candidate tiếp theo. Tiết kiệm latency và API calls.
+- [x] Dispatcher tìm candidates qua `GEOSEARCH` + `OSRM` và lưu vào hàng đợi Redis `order:candidates:{orderId}`
+- [x] Thực hiện gán khóa chốt tạm thời `order:pending_accept:{orderId}` với TTL 35s cho tài xế đầu tiên
+- [x] Update order sang trạng thái `WAITING_ACCEPTANCE` và gửi tin thông báo
+- [x] Thiết lập timer 30s (`setTimeout`) để xử lý tự động timeout
 
 ### Task 2.5.4: Shipper Response Handler
+- [x] Tạo REST API giả lập `POST /api/dispatcher/respond` tiếp nhận phản hồi của shipper
+- [x] Xử lý sự kiện **ACCEPT**: Chuyển trạng thái sang `ASSIGNED`, kích hoạt `shipper:busy` và publish `order.assigned` sang Kafka
+- [x] Xử lý sự kiện **REJECT**: Chuyển tài xế từ chối vào danh sách Cooldown `shipper:cooldown:{shipperId}` trong 15 phút, tự động gửi đề xuất cho tài xế tiếp theo
+- [x] Xử lý sự kiện **TIMEOUT**: Tự động giải phóng chốt khi hết 30s và chuyển đơn cho shipper tiếp theo hoặc chuyển thành `NO_SHIPPER` khi hết hàng đợi
 
-**Tạo REST API giả lập** (dùng để test khi chưa có Zalo thật):
-
-```
-POST /api/dispatcher/respond
-Body: { "orderId": "xxx", "shipperId": "yyy", "action": "accept" | "reject" }
-```
-
-> Khi tích hợp Zalo thật (Phase 6), endpoint này vẫn giữ lại như fallback/admin tool. Zalo webhook callback sẽ gọi cùng service function bên dưới.
-
-**Core service function** `handleShipperResponse(orderId, shipperId, action)`:
-
----
-
-**🟢 Case ACCEPT:**
-
-```
-1. Lấy Redis key order:pending_accept:{orderId}
-   → Không tồn tại → return { expired: true }
-   → shipperId không khớp → return { unauthorized: true }
-2. Hủy timer 30s (clearTimeout)
-3. Xóa Redis key order:pending_accept:{orderId}
-4. Update order: status = ASSIGNED, shipperId = X (qua Prisma)
-5. SADD shipper:busy {shipperId}
-6. Publish order.assigned lên Kafka
-7. notificationService.sendAcceptConfirm(shipper, order)
-8. Xóa order:candidates:{orderId}
-```
-
----
-
-**🔴 Case REJECT:**
-
-```
-1. Lấy Redis key order:pending_accept:{orderId}
-   → Không tồn tại → return { expired: true }
-   → shipperId không khớp → return { unauthorized: true }
-2. Hủy timer 30s (clearTimeout)
-3. Xóa Redis key order:pending_accept:{orderId}
-4. SET shipper:cooldown:{shipperId} "1" EX 900 (treo 15 phút)
-5. notificationService.sendRejectConfirm(shipper, orderId)
-6. Lấy candidate tiếp theo từ order:candidates:{orderId}
-   → Có candidate → lặp lại flow offer (Task 2.5.3 bước 4-8)
-   → Hết candidates → update order status = NO_SHIPPER
-```
-
----
-
-**⏰ Case TIMEOUT (30s, tự động):**
-
-```
-1. Timer callback fire sau 30s
-2. Kiểm tra order:pending_accept:{orderId} còn tồn tại
-   → Không → shipper đã accept/reject trước đó → skip
-3. Xóa Redis key order:pending_accept:{orderId}
-4. notificationService.sendTimeoutNotice(shipper, orderId)
-5. Lấy candidate tiếp theo từ order:candidates:{orderId}
-   → Có candidate → lặp lại flow offer
-   → Hết candidates → update order status = NO_SHIPPER
-```
-
-> [!WARNING]
-> **Timer management**: `setTimeout` sẽ mất nếu server restart. Cho MVP đủ dùng. Production-ready cân nhắc thay bằng Bull/BullMQ delayed job hoặc Redis keyspace notification.
-
-### Task 2.5.5: Status Notification Messages (định nghĩa template)
-
-Định nghĩa bảng template tin nhắn — console provider sẽ log, Zalo provider (Phase 6) sẽ gửi thật:
-
-| Sự kiện | Template tin nhắn | Trigger |
-|---|---|---|
-| Order offer | "📦 Đơn mới: {deliveryAddress} — {distance}km (~{duration} phút)" | Dispatcher chọn candidate |
-| Accept | "✅ Đã nhận đơn #{orderId}. Lấy hàng tại: {pickupAddress}" | Shipper accept |
-| Reject | "❌ Đã từ chối đơn #{orderId} — {timestamp}. Treo 15 phút." | Shipper reject |
-| Timeout | "⏰ Hết hạn phản hồi đơn #{orderId}" | 30s không phản hồi |
-| Delivering | "🚚 Đơn #{orderId} đang được giao..." | Bắt đầu di chuyển (Phase 4) |
-| Success | "🎉 Giao thành công đơn #{orderId} lúc {HH:mm dd/MM}" | Order hoàn thành (Phase 4) |
+### Task 2.5.5: Status Notification Messages
+- [x] Định nghĩa bảng mẫu tin nhắn đầy đủ cho các sự kiện (Offer, Accept, Reject, Timeout, Delivering, Success)
 
 ### Cách test toàn bộ flow (Mock Mode)
 
@@ -339,9 +198,10 @@ curl -X POST localhost:3000/api/dispatcher/respond \
 ### Task 3.1: Socket.io Gateway trên Server — ✅ HOÀN THÀNH
 - [x] Setup Socket.io server tích hợp vào Express HTTP server
 - [x] Namespace `/tracking` cho GPS updates
-- [x] Events: `shipper:location_update`, `order:status_change`
-- [x] Auth middleware cho socket (JWT hoặc API key)
-- [x] Room per order: `order:{order_id}` (cho future frontend subscribe)
+- [x] Events: `shipper:location_update`, `shipper:location_updated` và `join_order`
+- [x] Auth middleware cho socket sử dụng cấu hình `SOCKET_TOKEN`
+- [x] Thiết lập phòng (room) `order:{orderId}` để phát sóng tọa độ cập nhật cho các client
+- [x] API `GET /api/orders`: Thêm endpoint lấy danh sách đơn hàng phục vụ cho giám sát di chuyển
 
 ### Task 3.2: Simulator Script (standalone Node.js) — ✅ HOÀN THÀNH
 - [x] File riêng: `src/scripts/shipper-simulator.ts`
