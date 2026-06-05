@@ -334,26 +334,26 @@ curl -X POST localhost:3000/api/dispatcher/respond \
 
 ---
 
-## Phase 3 — Real-time Simulator Script (3-4 ngày)
+## Phase 3 — Real-time Simulator Script (3-4 ngày) — ✅ HOÀN THÀNH 100%
 
-### Task 3.1: Socket.io Gateway trên Server
-- Setup Socket.io server tích hợp vào Express HTTP server
-- Namespace `/tracking` cho GPS updates
-- Events: `shipper:location_update`, `order:status_change`
-- Auth middleware cho socket (JWT hoặc API key)
-- Room per order: `order:{order_id}` (cho future frontend subscribe)
+### Task 3.1: Socket.io Gateway trên Server — ✅ HOÀN THÀNH
+- [x] Setup Socket.io server tích hợp vào Express HTTP server
+- [x] Namespace `/tracking` cho GPS updates
+- [x] Events: `shipper:location_update`, `order:status_change`
+- [x] Auth middleware cho socket (JWT hoặc API key)
+- [x] Room per order: `order:{order_id}` (cho future frontend subscribe)
 
-### Task 3.2: Simulator Script (standalone Node.js)
-- File riêng: `src/scripts/shipper-simulator.ts`
-- Nhận event `order.assigned` từ Kafka → lấy route geometry
-- Decode route coordinates thành array `[lng, lat][]`
-- Mỗi 2s: emit GPS point tiếp theo qua Socket.io client
-- Hỗ trợ chạy nhiều shipper cùng lúc (Map<shipperId, intervalId>)
+### Task 3.2: Simulator Script (standalone Node.js) — ✅ HOÀN THÀNH
+- [x] File riêng: `src/scripts/shipper-simulator.ts`
+- [x] Nhận event `order.assigned` từ Kafka → lấy route geometry
+- [x] Decode route coordinates thành array `[lng, lat][]`
+- [x] Mỗi 2s: emit GPS point tiếp theo qua Socket.io client
+- [x] Hỗ trợ chạy nhiều shipper cùng lúc (Map<shipperId, intervalId>)
 
-### Task 3.3: Server nhận GPS & update
-- Nhận `shipper:location_update` trong `tracking.socket.ts` → update Redis GEOADD
-- Broadcast location xuống room `order:{order_id}`
-- Log trajectory vào PostgreSQL (batch insert mỗi 10 points để giảm write)
+### Task 3.3: Server nhận GPS & update — ✅ HOÀN THÀNH
+- [x] Nhận `shipper:location_update` trong `tracking.socket.ts` → update Redis GEOADD
+- [x] Broadcast location xuống room `order:{order_id}`
+- [x] Log trajectory vào PostgreSQL (batch insert mỗi 10 points để giảm write)
 
 > [!TIP]
 > **Gợi ý**: Thêm **interpolation** giữa các OSRM waypoints để chuyển động mượt hơn. OSRM trả ~50-200 points cho 1 route, interpolate lên 1 point/2s sẽ realistic hơn.
@@ -362,24 +362,24 @@ curl -X POST localhost:3000/api/dispatcher/respond \
 
 ---
 
-## Phase 4 — Geofencing & Order Completion (2-3 ngày)
+## Phase 4 — Geofencing & Order Completion (2-3 ngày) — ✅ HOÀN THÀNH 100%
 
-### Task 4.1: Distance checker
-- Mỗi khi nhận GPS update → tính khoảng cách tới điểm giao (Haversine formula)
-- Hoặc dùng Redis `GEODIST shipper:{id} destination:{order_id}` (chính xác hơn)
-- Threshold: ≤ 20m → trigger completion
+### Task 4.1: Distance checker — ✅ HOÀN THÀNH
+- [x] Mỗi khi nhận GPS update → tính khoảng cách tới điểm giao (Haversine formula)
+- [x] Hoặc dùng Redis `GEODIST shipper:{id} destination:{order_id}` (chính xác hơn)
+- [x] Threshold: ≤ 20m → trigger completion
 
-### Task 4.2: Order completion flow
-- Update order status → `DELIVERING` khi shipper bắt đầu di chuyển
-- Update order status → `SUCCESS` khi distance ≤ 20m
-- Timestamp `completed_at`
-- Remove shipper khỏi `shipper:busy` set
-- Xóa route data khỏi Redis
-- Stop simulator interval cho shipper này
+### Task 4.2: Order completion flow — ✅ HOÀN THÀNH
+- [x] Update order status → `DELIVERING` khi shipper bắt đầu di chuyển
+- [x] Update order status → `SUCCESS` khi distance ≤ 20m
+- [x] Timestamp `completed_at`
+- [x] Remove shipper khỏi `shipper:busy` set
+- [x] Xóa route data khỏi Redis
+- [x] Stop simulator interval cho shipper này
 
-### Task 4.3: Revenue event
-- Publish `order.completed` lên Kafka topic `revenue`
-- Payload: `{ order_id, shipper_id, amount, completed_at }`
+### Task 4.3: Revenue event — ✅ HOÀN THÀNH
+- [x] Publish `order.completed` lên Kafka topic `revenue`
+- [x] Payload: `{ order_id, shipper_id, amount, completed_at }`
 
 **✅ Acceptance**: Simulator chạy → shipper đến gần điểm giao ≤20m → order tự SUCCESS → event bắn sang Kafka.
 
