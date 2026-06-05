@@ -32,10 +32,25 @@ model Order {
   shipper  Shipper?        @relation(fields: [shipperId], references: [id])
   revenues RevenueRecord[]
   messages MessageLog[]
+  trajectory TrajectoryPoint[]
 
   @@index([status])
   @@index([shipperId])
   @@map("orders")
+}
+
+model TrajectoryPoint {
+  id        String   @id
+  orderId   String   @map("order_id")
+  shipperId String   @map("shipper_id")
+  lat       Float
+  lng       Float
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@map("trajectory_points")
 }
 
 enum OrderStatus {
