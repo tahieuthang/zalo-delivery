@@ -149,3 +149,24 @@ export async function setOrderNoShipper(orderId: string): Promise<void> {
   logger.warn({ orderId }, 'Order status updated to NO_SHIPPER in database');
 }
 
+/**
+ * Retrieve all orders.
+ */
+export async function getOrders(): Promise<OrderResponse[]> {
+  const orders = await orderRepo.findAll();
+  return orders.map((order) => ({
+    id: order.id,
+    customerId: order.customerId,
+    pickupAddress: order.pickupAddress,
+    pickupLat: order.pickupLat,
+    pickupLng: order.pickupLng,
+    deliveryAddress: order.deliveryAddress,
+    deliveryLat: order.deliveryLat,
+    deliveryLng: order.deliveryLng,
+    status: order.status as OrderStatus,
+    note: order.note,
+    createdAt: order.createdAt.toISOString(),
+  }));
+}
+
+

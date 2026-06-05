@@ -29,3 +29,18 @@ export async function update(id: string, data: Prisma.OrderUpdateInput) {
     data,
   });
 }
+
+/**
+ * Find all non-deleted orders, sorted by creation date.
+ */
+export async function findAll() {
+  return prisma.order.findMany({
+    where: {
+      deletedAt: null,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+}
+

@@ -23,6 +23,22 @@ orderRouter.post(
 );
 
 /**
+ * Endpoint to get all orders.
+ * GET /api/orders
+ */
+orderRouter.get(
+  '/',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await orderService.getOrders();
+      res.status(200).json({ data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
  * Endpoint to get order details by ID.
  * GET /api/orders/:id
  */
@@ -37,3 +53,4 @@ orderRouter.get(
     }
   },
 );
+

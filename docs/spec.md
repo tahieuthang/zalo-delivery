@@ -188,6 +188,7 @@ ShipperStatus: ONLINE | OFFLINE | BUSY
 | Method | Path | Mô tả |
 |---|---|---|
 | `POST` | `/api/orders` | Tạo đơn hàng (internal, qua webhook) |
+| `GET` | `/api/orders` | Danh sách tất cả đơn hàng |
 | `GET` | `/api/orders/:id` | Lấy chi tiết đơn hàng |
 
 ### 5.3 Shipper
@@ -217,6 +218,53 @@ ShipperStatus: ONLINE | OFFLINE | BUSY
 **Responses**:
 - `200`: `{ data: { message: "Shipper successfully responded with: accept|reject" } }`
 - `400`: `{ error: "OFFER_EXPIRED" | "UNAUTHORIZED_RESPONDER" | "ORDER_OR_SHIPPER_NOT_FOUND" }`
+
+### 5.5 WebSocket (Socket.io) Tracking Protocol
+
+Sử dụng cổng giao tiếp WebSocket với Socket.io để theo dõi hành trình di chuyển trực tiếp của tài xế cho từng đơn hàng.
+
+* **Namespace**: `/tracking`
+* **Xác thực**: Token được truyền qua Header `token` hoặc query parameter `token` (giá trị tương ứng cấu hình `SOCKET_TOKEN`).
+
+#### Các sự kiện của Client (Client to Server)
+
+##### 1. Đăng ký phòng theo dõi đơn hàng (`join_order`)
+Client (ví dụ: Mobile App của Khách hàng, Web Dashboard quản trị) đăng ký nhận thông báo thay đổi tọa độ của đơn hàng cụ thể:
+* **Event**: `join_order`
+* **Payload**:
+  ```json
+  { "orderId": "string" }
+  ```
+
+##### 2. Cập nhật tọa độ từ thiết bị Shipper (`shipper:location_update`)
+Thiết bị của Shipper (hoặc trình giả lập) liên tục gửi GPS tick lên server (khoảng 2-5 giây một lần):
+* **Event**: `shipper:location_update`
+* **Payload**:
+  ```json
+  {
+    "shipperId": "string",
+    "orderId": "string",
+    "lat": 10.779786,
+    "lng": 106.699066
+  }
+  ```
+
+#### Các sự kiện của Server (Server to Client)
+
+##### 1. Phát sóng tọa độ cập nhật (`shipper:location_updated`)
+Server phát lại tọa độ cho tất cả Client trong phòng theo dõi đơn hàng `order:{orderId}` để cập nhật giao diện bản đồ trực quan:
+* **Event**: `shipper:location_updated`
+* **Payload**:
+  ```json
+  {
+    "shipperId": "string",
+    "orderId": "string",
+    "lat": 10.779786,
+    "lng": 106.699066,
+    "timestamp": "2026-06-04T16:22:55.837Z"
+  }
+  ```
+
 
 ---
 
