@@ -7,6 +7,9 @@ import { redis } from '@infra/redis/redis-client';
 import { connectProducer, disconnectProducer } from '@infra/kafka/producer';
 import { initModules } from './routes';
 import { initSocketServer, flushTrajectoryBuffer } from '@infra/socket';
+import { stopDispatcherConsumer } from '@modules/dispatcher';
+import { stopRevenueConsumer } from '@modules/revenue';
+
 
 export async function createServer() {
   const app = createApp();
@@ -32,6 +35,14 @@ export async function createServer() {
 
 export async function gracefulShutdown(server: http.Server) {
   logger.info('Shutting down gracefully...');
+
+  // Stop consumers first to prevent processing new messages during shutdown
+  try {
+    await stopDispatcherConsumer();
+    await stopRevenueConsumer();
+  } catch (err) {
+    logger.error({ err }, 'Error stopping Kafka consumers during shutdown');
+  }
 
   // Flush any remaining trajectory points before exit
   try {
