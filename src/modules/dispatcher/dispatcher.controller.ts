@@ -3,6 +3,8 @@ import * as dispatcherService from '@modules/dispatcher/dispatcher.service';
 import { ulid } from '@shared/utils/id-generator';
 import { validate } from '@shared/middleware/validate';
 import { ShipperResponseRequestDto } from '@modules/dispatcher/dispatcher.dto';
+import { getConsumerLag } from '@infra/kafka/monitoring';
+import { KAFKA_TOPICS } from '@infra/kafka/topics';
 
 export const dispatcherRouter = Router();
 
@@ -25,6 +27,23 @@ dispatcherRouter.get(
     }
   },
 );
+
+/**
+ * Consumer lag check.
+ * GET /api/dispatcher/lag
+ */
+dispatcherRouter.get(
+  '/lag',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const report = await getConsumerLag('dispatcher-service', KAFKA_TOPICS.ORDER_CREATED);
+      res.status(200).json({ data: report });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 
 /**
  * Developer helper route to manually trigger order dispatch logic.

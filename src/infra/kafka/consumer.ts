@@ -1,12 +1,14 @@
-import { kafka } from './kafka-client';
+import { kafka } from '@infra/kafka/kafka-client';
+import { producer } from '@infra/kafka/producer';
 import logger from '@shared/logger/logger';
+
 
 export function createConsumer(groupId: string) {
   return kafka.consumer({ groupId });
 }
 
 /**
- * Subscribe và chạy consumer với error handling chuẩn
+ * Subscribe và chạy consumer với error handling chuẩn và Dead Letter Queue (DLQ)
  */
 export async function runConsumer(
   groupId: string,
@@ -25,9 +27,38 @@ export async function runConsumer(
       try {
         const parsed = JSON.parse(raw) as Record<string, unknown>;
         await handler(parsed);
-      } catch (err) {
+      } catch (err: any) {
         logger.error({ err, topic: t, partition, offset: message.offset }, 'Consumer handler error');
-        // TODO: implement DLQ logic
+        
+        // Dead Letter Queue (DLQ) logic
+        try {
+          const dlqTopic = `${t}.dlq`;
+          const dlqPayload = {
+            originalTopic: t,
+            partition,
+            offset: message.offset,
+            key: message.key?.toString() || null,
+            value: raw,
+            error: {
+              message: err?.message || String(err),
+              stack: err?.stack || null,
+            },
+            timestamp: new Date().toISOString(),
+          };
+
+          await producer.send({
+            topic: dlqTopic,
+            messages: [
+              {
+                key: message.key || undefined,
+                value: JSON.stringify(dlqPayload),
+              },
+            ],
+          });
+          logger.warn({ dlqTopic, offset: message.offset }, 'Successfully sent failed message to DLQ');
+        } catch (dlqErr) {
+          logger.error({ err: dlqErr }, 'Failed to publish message to DLQ');
+        }
       }
     },
   });
@@ -38,3 +69,4 @@ export async function runConsumer(
     await consumer.disconnect();
   };
 }
+
