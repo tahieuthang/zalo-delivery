@@ -124,4 +124,6 @@ RULE-AI06: Khi thêm Redis key mới, PHẢI document key pattern ở đầu fil
 RULE-AI07: LUÔN kiểm tra xem đã có shared utility chưa trước khi viết mới
 RULE-AI08: Giữ nguyên style: singleQuote, trailingComma 'all' (theo .prettierrc)
 RULE-AI09: Khi tạo module mới, tạo đủ 5 file tối thiểu: controller, service, dto, types, index.ts
+RULE-AI10: LUÔN sử dụng đường dẫn tuyệt đối (absolute path aliases như @modules/, @infra/, @shared/, @config/) thay cho đường dẫn tương đối (./, ../) khi import giữa các package/module hoặc từ bên ngoài.
+
 ```

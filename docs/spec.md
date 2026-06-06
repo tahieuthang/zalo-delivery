@@ -190,6 +190,8 @@ ShipperStatus: ONLINE | OFFLINE | BUSY
 | `POST` | `/api/orders` | Tạo đơn hàng (internal, qua webhook) |
 | `GET` | `/api/orders` | Danh sách tất cả đơn hàng |
 | `GET` | `/api/orders/:id` | Lấy chi tiết đơn hàng |
+| `GET` | `/api/orders/:id/tracking` | Vị trí hiện tại của shipper đang giao đơn này (Redis snapshot) |
+| `GET` | `/api/orders/:id/trajectory` | Lịch sử hành trình GPS đã ghi (PostgreSQL) |
 
 ### 5.3 Shipper
 
@@ -201,6 +203,7 @@ ShipperStatus: ONLINE | OFFLINE | BUSY
 | `PATCH` | `/api/shippers/:id` | Cập nhật thông tin shipper |
 | `DELETE` | `/api/shippers/:id` | Soft delete shipper |
 | `PATCH` | `/api/shippers/:id/status` | Toggle ONLINE/OFFLINE + sync Redis Geo |
+| `GET` | `/api/shippers/:id/location` | Vị trí hiện tại của shipper (Redis Geo snapshot) |
 
 ### 5.4 Dispatcher
 
@@ -265,6 +268,51 @@ Server phát lại tọa độ cho tất cả Client trong phòng theo dõi đơ
   }
   ```
 
+
+### 5.6 Tracking REST APIs (Live Position Snapshot)
+
+Các endpoint REST bổ trợ cho WebSocket, dùng để lấy **vị trí hiện tại tức thời** mà không cần mở kết nối socket. Dữ liệu đọc trực tiếp từ Redis Geo (rất nhanh, ~1ms).
+
+#### `GET /api/orders/:id/tracking`
+
+Lấy vị trí hiện tại của shipper đang giao đơn hàng này.
+
+**Response** (`200`):
+```json
+{
+  "data": {
+    "orderId": "order-real-demo",
+    "shipperId": "shipper-real-demo-3",
+    "shipperName": "Lê Hoàng Nam",
+    "currentLocation": { "lat": 10.7801, "lng": 106.6990 },
+    "deliveryLocation": { "lat": 10.7725, "lng": 106.698 },
+    "orderStatus": "DELIVERING",
+    "timestamp": "2026-06-04T16:25:00.000Z"
+  }
+}
+```
+**Errors**:
+- `404`: Đơn hàng không tồn tại hoặc chưa được assign cho shipper
+- `400`: Đơn hàng chưa ở trạng thái ASSIGNED/DELIVERING
+
+#### `GET /api/shippers/:id/location`
+
+Lấy vị trí hiện tại của 1 shipper bất kỳ đang online (dùng cho bản đồ tổng quan trên dashboard).
+
+**Response** (`200`):
+```json
+{
+  "data": {
+    "shipperId": "shipper-real-demo-3",
+    "name": "Lê Hoàng Nam",
+    "status": "ONLINE",
+    "location": { "lat": 10.7801, "lng": 106.6990 },
+    "timestamp": "2026-06-04T16:25:00.000Z"
+  }
+}
+```
+**Errors**:
+- `404`: Shipper không tồn tại hoặc không có vị trí trên Redis Geo (offline)
 
 ---
 
