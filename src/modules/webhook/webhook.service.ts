@@ -7,6 +7,9 @@ import { ErrorCode } from '@shared/errors/error-codes';
 import * as webhookRepo from '@modules/webhook/webhook.repository';
 import type { ZaloWebhookPayload, ParsedOrder } from '@modules/webhook/webhook.types';
 import * as orderService from '@modules/order/order.service';
+import { handleShipperResponse } from '@modules/dispatcher/dispatcher.service';
+import { prisma } from '@infra/database/prisma-client';
+import { getAccessToken } from '@infra/zalo/zalo-token.service';
 import logger from '@shared/logger/logger';
 
 // Default pickup address if not provided in the parsed text message
@@ -31,6 +34,38 @@ export function verifySignature(
 
   // Direct comparison for Zalo MAC verification
   return computedMac === signature;
+}
+
+/**
+ * Fetch Zalo User Profile name using OA API
+ */
+export async function fetchZaloProfile(zaloUserId: string): Promise<string | null> {
+  const url = `https://openapi.zalo.me/v2.0/oa/getprofile?data=${encodeURIComponent(
+    JSON.stringify({ user_id: zaloUserId })
+  )}`;
+
+  try {
+    const accessToken = await getAccessToken();
+    if (!accessToken) return null;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        access_token: accessToken,
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) return null;
+
+    const json = (await response.json()) as any;
+    if (json.error === 0 && json.data?.displayName) {
+      return json.data.displayName as string;
+    }
+  } catch (err) {
+    logger.error({ err, zaloUserId }, 'Failed to fetch Zalo profile for user');
+  }
+  return null;
 }
 
 /**
@@ -94,7 +129,6 @@ export function parseOrderMessage(text: string): ParsedOrder {
 
   // 4. Fallback to split-based heuristic (e.g. "Nguyễn Văn A - 0912345678 - 123 Lê Lợi Q1")
   if (!name || !deliveryAddress) {
-    // Split by dash, pipe, or newline (BUT NOT comma to protect addresses like "123 Lê Lợi, Q1")
     const parts = cleanText.split(/[-|\n|]+/).map((p) => p.trim()).filter(Boolean);
     
     let detectedName = '';
@@ -185,105 +219,173 @@ export function parseOrderMessage(text: string): ParsedOrder {
 
 /**
  * Core business logic to process Zalo OA Webhook.
- * 1. Ignore events that are not user_send_text.
- * 2. Check duplicate message via Redis (SET NX EX).
- * 3. Log to PostgreSQL MessageLog table.
- * 4. Parse order and create the order using the Order Module.
  */
 export async function processWebhook(
   payload: ZaloWebhookPayload,
   rawBody: string,
   signature: string,
 ): Promise<{ processed: boolean; reason?: string; orderId?: string }> {
-  // 1. Only process user_send_text events
-  if (payload.event_name !== 'user_send_text') {
-    logger.info({ event: payload.event_name }, 'Webhook event ignored (not user_send_text)');
-    return { processed: false, reason: 'ignored_event' };
-  }
-
-  const message = payload.message;
-  if (!message || !message.text) {
-    return { processed: false, reason: 'empty_message' };
-  }
-
-  const messageId = message.msg_id;
-  const rawText = message.text;
-  const senderId = payload.sender.id;
-
-  // 2. Signature verification
+  // 1. Signature verification
   const isSignatureValid = verifySignature(payload, rawBody, signature);
   if (!isSignatureValid) {
-    logger.error({ messageId }, 'Webhook signature verification failed');
+    logger.error('Webhook signature verification failed');
     throw new AppError(403, ErrorCode.INVALID_SIGNATURE, 'Chữ ký webhook không hợp lệ');
   }
 
-  // 3. Redis deduplication (atomic isNew check-and-set with 24h TTL)
-  // key standard pattern: webhook:dedup:{message_id}
-  const isMessageNew = await isNew('webhook', messageId, 86400);
-  if (!isMessageNew) {
-    logger.warn({ messageId }, 'Duplicate webhook message skipped');
-    throw new AppError(409, ErrorCode.DUPLICATE_MESSAGE, 'Tin nhắn đã được xử lý trước đó');
+  // 2. Handle Follow Event
+  if (payload.event_name === 'follow') {
+    const followerId = payload.follower?.id;
+    if (!followerId) {
+      return { processed: false, reason: 'missing_follower_id' };
+    }
+
+    logger.info({ followerId }, 'Handling Zalo OA follow event...');
+
+    // Attempt to fetch name from profile and map to database shipper
+    const name = await fetchZaloProfile(followerId);
+    let matchedShipper = null;
+
+    if (name) {
+      matchedShipper = await prisma.shipper.findFirst({
+        where: {
+          name: { equals: name, mode: 'insensitive' },
+          zaloUserId: null,
+        },
+      });
+    }
+
+    // Fallback: If no name match, pick the first offline shipper without zaloUserId for testing ease
+    if (!matchedShipper) {
+      matchedShipper = await prisma.shipper.findFirst({
+        where: {
+          zaloUserId: null,
+        },
+      });
+    }
+
+    if (matchedShipper) {
+      await prisma.shipper.update({
+        where: { id: matchedShipper.id },
+        data: { zaloUserId: followerId },
+      });
+      logger.info(
+        { shipperId: matchedShipper.id, shipperName: matchedShipper.name, followerId },
+        'Auto-captured and linked zaloUserId to shipper'
+      );
+      return { processed: true, reason: 'follower_linked_to_shipper' };
+    }
+
+    logger.warn({ followerId, name }, 'Follower could not be matched to any registered shipper');
+    return { processed: true, reason: 'follower_logged_only' };
   }
 
-  const logId = ulid();
-  let parsed: ParsedOrder | null = null;
-  let parseError: string | null = null;
+  // 3. Handle Text Event
+  if (payload.event_name === 'user_send_text') {
+    const message = payload.message;
+    if (!message || !message.text) {
+      return { processed: false, reason: 'empty_message' };
+    }
 
-  // 4. Parse the text message
-  try {
-    parsed = parseOrderMessage(rawText);
-  } catch (err: any) {
-    parseError = err.message || 'Lỗi phân tích cú pháp tin nhắn';
-    logger.error({ err, rawText }, 'Failed to parse order message');
+    const messageId = message.msg_id;
+    const rawText = message.text.trim();
+    const senderId = payload.sender?.id;
+    if (!senderId) {
+      return { processed: false, reason: 'missing_sender_id' };
+    }
+
+    // Deduplication check via Redis
+    const isMessageNew = await isNew('webhook', messageId, 86400);
+    if (!isMessageNew) {
+      logger.warn({ messageId }, 'Duplicate webhook message skipped');
+      throw new AppError(409, ErrorCode.DUPLICATE_MESSAGE, 'Tin nhắn đã được xử lý trước đó');
+    }
+
+    // 3.1 Check if this is a Shipper confirmation response callback button
+    // payloads: #accept:{orderId} or #reject:{orderId}
+    const match = rawText.match(/^#(accept|reject):(.+)$/i);
+    if (match) {
+      const action = match[1].toLowerCase() as 'accept' | 'reject';
+      const orderId = match[2];
+
+      logger.info({ senderId, action, orderId }, 'Detected shipper response button payload');
+
+      // Resolve shipper by zaloUserId
+      const shipper = await prisma.shipper.findUnique({
+        where: { zaloUserId: senderId },
+      });
+
+      if (!shipper) {
+        logger.error({ senderId }, 'Shipper not found for this zaloUserId');
+        return { processed: false, reason: 'shipper_not_found' };
+      }
+
+      const result = await handleShipperResponse(orderId, shipper.id, action);
+      if (result.success) {
+        return { processed: true, reason: `shipper_${action}_processed` };
+      } else {
+        logger.warn({ orderId, shipperId: shipper.id, error: result.error }, 'Failed to handle shipper response');
+        return { processed: false, reason: result.error || 'shipper_response_failed' };
+      }
+    }
+
+    // 3.2 Otherwise, it is a Customer message for order creation
+    const logId = ulid();
+    let parsed: ParsedOrder | null = null;
+    let parseError: string | null = null;
+
+    try {
+      parsed = parseOrderMessage(rawText);
+    } catch (err: any) {
+      parseError = err.message || 'Lỗi phân tích cú pháp tin nhắn';
+      logger.error({ err, rawText }, 'Failed to parse order message');
+    }
+
+    if (!parsed || parseError) {
+      await webhookRepo.createMessageLog({
+        id: logId,
+        messageId,
+        senderId,
+        rawText,
+        parsedOk: false,
+        parseError,
+      });
+      throw new AppError(400, ErrorCode.PARSE_FAILED, `Không thể đọc tin nhắn đơn hàng: ${parseError}`);
+    }
+
+    try {
+      const createdOrder = await orderService.createOrder({
+        customerId: senderId,
+        pickupAddress: parsed.pickupAddress || DEFAULT_PICKUP_ADDRESS,
+        deliveryAddress: parsed.deliveryAddress,
+        note: parsed.note,
+      });
+
+      await webhookRepo.createMessageLog({
+        id: logId,
+        messageId,
+        senderId,
+        rawText,
+        parsedOk: true,
+        order: { connect: { id: createdOrder.id } },
+      });
+
+      logger.info({ messageId, orderId: createdOrder.id }, 'Message parsed and order created successfully');
+      return { processed: true, orderId: createdOrder.id };
+    } catch (err: any) {
+      const errorMsg = err.message || 'Lỗi lưu đơn hàng vào database';
+      await webhookRepo.createMessageLog({
+        id: logId,
+        messageId,
+        senderId,
+        rawText,
+        parsedOk: false,
+        parseError: errorMsg,
+      });
+
+      logger.error({ err, messageId }, 'Failed to create order from parsed webhook');
+      throw err;
+    }
   }
 
-  // 5. If parse failed, log to PostgreSQL with parsedOk = false and throw ParseError
-  if (!parsed || parseError) {
-    await webhookRepo.createMessageLog({
-      id: logId,
-      messageId,
-      senderId,
-      rawText,
-      parsedOk: false,
-      parseError,
-    });
-    throw new AppError(400, ErrorCode.PARSE_FAILED, `Không thể đọc tin nhắn đơn hàng: ${parseError}`);
-  }
-
-  // 6. Parsing succeeded! Create order in PENDING status
-  try {
-    const createdOrder = await orderService.createOrder({
-      customerId: senderId, // Maps to the customerId
-      pickupAddress: parsed.pickupAddress || DEFAULT_PICKUP_ADDRESS,
-      deliveryAddress: parsed.deliveryAddress,
-      note: parsed.note,
-    });
-
-    // Save message log as successful and link to order ID
-    await webhookRepo.createMessageLog({
-      id: logId,
-      messageId,
-      senderId,
-      rawText,
-      parsedOk: true,
-      order: { connect: { id: createdOrder.id } },
-    });
-
-    logger.info({ messageId, orderId: createdOrder.id }, 'Message parsed and order created successfully');
-    return { processed: true, orderId: createdOrder.id };
-  } catch (err: any) {
-    // If order creation failed (e.g. Geocoding error), log failure
-    const errorMsg = err.message || 'Lỗi lưu đơn hàng vào database';
-    await webhookRepo.createMessageLog({
-      id: logId,
-      messageId,
-      senderId,
-      rawText,
-      parsedOk: false,
-      parseError: errorMsg,
-    });
-
-    logger.error({ err, messageId }, 'Failed to create order from parsed webhook');
-    throw err;
-  }
+  return { processed: false, reason: 'unsupported_event' };
 }

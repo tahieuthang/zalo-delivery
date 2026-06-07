@@ -12,18 +12,17 @@ webhookRouter.post(
   '/zalo',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const allowedEvents = ['user_send_text', 'follow'];
+      if (req.body && !allowedEvents.includes(req.body.event_name)) {
+        res.status(200).json({
+          data: { processed: false, reason: 'ignored_event' },
+        });
+        return;
+      }
+
       const parseResult = ZaloWebhookPayloadSchema.safeParse(req.body);
       
       if (!parseResult.success) {
-        // If event is not user_send_text, ignore it safely without returning 400 error
-        if (req.body && req.body.event_name !== 'user_send_text') {
-          res.status(200).json({
-            data: { processed: false, reason: 'ignored_event' },
-          });
-          return;
-        }
-        
-        // Otherwise return validation error to caller
         res.status(400).json({
           error: 'Validation failed',
           details: parseResult.error.flatten().fieldErrors,

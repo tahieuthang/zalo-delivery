@@ -25,6 +25,9 @@ const envSchema = z.object({
   ZALO_OA_ID: z.string().optional(),
   ZALO_APP_ID: z.string().optional(),
   ZALO_APP_SECRET: z.string().optional(),
+  ZALO_OA_ACCESS_TOKEN: z.string().optional(),
+  ZALO_OA_REFRESH_TOKEN: z.string().optional(),
+  ZALO_OA_SECRET_KEY: z.string().optional(),
 
   // Notification Abstraction
   NOTIFICATION_PROVIDER: z.enum(['console', 'zalo']).default('console'),
