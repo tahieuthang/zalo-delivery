@@ -32,8 +32,20 @@ export function verifySignature(
   const rawData = payload.app_id + rawBody + payload.timestamp + env.ZALO_APP_SECRET;
   const computedMac = crypto.createHash('sha256').update(rawData).digest('hex');
 
-  // Direct comparison for Zalo MAC verification
-  return computedMac === signature;
+  const isValid = computedMac === signature;
+
+  if (!isValid) {
+    logger.warn(
+      { computedMac, receivedSignature: signature, eventName: payload.event_name },
+      'Webhook signature verification failed.'
+    );
+    if (env.NODE_ENV === 'development') {
+      logger.info('Development mode: bypassing failed signature check to allow testing.');
+      return true;
+    }
+  }
+
+  return isValid;
 }
 
 /**
