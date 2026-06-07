@@ -1,14 +1,22 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import * as revenueService from './revenue.service';
-import { DailyRevenueQuerySchema } from './revenue.dto';
+import * as revenueService from '@modules/revenue/revenue.service';
+import { DailyRevenueQuerySchema } from '@modules/revenue/revenue.dto';
 import { getConsumerLag } from '@infra/kafka/monitoring';
 import { KAFKA_TOPICS } from '@infra/kafka/topics';
 
 export const revenueRouter = Router();
 
 /**
- * GET /api/revenue/lag
- * Get consumer lag report for revenue service.
+ * @openapi
+ * /api/revenue/lag:
+ *   get:
+ *     summary: Get consumer lag report
+ *     description: Fetch the current lag for the revenue service consumer group on the order.completed topic.
+ *     tags:
+ *       - Revenue
+ *     responses:
+ *       200:
+ *         description: Success
  */
 revenueRouter.get(
   '/lag',
@@ -22,10 +30,17 @@ revenueRouter.get(
   },
 );
 
-
 /**
- * GET /api/revenue/summary
- * Get total revenue and successful order count.
+ * @openapi
+ * /api/revenue/summary:
+ *   get:
+ *     summary: Get overall revenue summary
+ *     description: Retrieve total system revenue and number of successful orders (cached for 5 minutes).
+ *     tags:
+ *       - Revenue
+ *     responses:
+ *       200:
+ *         description: Success
  */
 revenueRouter.get(
   '/summary',
@@ -40,8 +55,23 @@ revenueRouter.get(
 );
 
 /**
- * GET /api/revenue/shipper/:id
- * Get total earnings and records of a specific shipper.
+ * @openapi
+ * /api/revenue/shipper/{id}:
+ *   get:
+ *     summary: Get shipper earnings
+ *     description: Retrieve the total earnings and historical revenue records for a specific shipper.
+ *     tags:
+ *       - Revenue
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Shipper ID
+ *     responses:
+ *       200:
+ *         description: Success
  */
 revenueRouter.get(
   '/shipper/:id',
@@ -56,8 +86,29 @@ revenueRouter.get(
 );
 
 /**
- * GET /api/revenue/daily
- * Get daily revenue aggregated statistics.
+ * @openapi
+ * /api/revenue/daily:
+ *   get:
+ *     summary: Get daily revenue aggregation
+ *     description: Retrieve daily aggregated revenue and order count statistics, optionally filtered by date range.
+ *     tags:
+ *       - Revenue
+ *     parameters:
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter start date (YYYY-MM-DD)
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter end date (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Success
  */
 revenueRouter.get(
   '/daily',
