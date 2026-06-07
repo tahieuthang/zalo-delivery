@@ -36,6 +36,12 @@ export function createApp() {
   // Apply rate limiter to webhook endpoint paths
   app.use('/api/webhooks', webhookLimiter);
 
+  // Zalo Domain Verification Route
+  app.get('/zalo_verifierSz6GDeNzA6zwwuPeczWJS4tkmrMXc1O3DZ8v.html', (req, res) => {
+    res.setHeader('Content-Type', 'text/html');
+    res.send('Sz6GDeNzA6zwwuPeczWJS4tkmrMXc1O3DZ8v');
+  });
+
   // Routes
   app.use('/api', router);
 
