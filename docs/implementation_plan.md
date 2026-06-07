@@ -425,29 +425,27 @@ curl -X POST localhost:3000/api/dispatcher/respond \
 
 ---
 
-## Phase 6 — Polish & Hardening (2-3 ngày)
+## Phase 6 — Polish & Hardening (2-3 ngày) — ✅ HOÀN THÀNH 100%
 
-### Task 6.1: API documentation
-- Swagger/OpenAPI spec tự động (swagger-jsdoc + swagger-ui-express)
-- Hoặc dùng **Scalar** (UI đẹp hơn Swagger UI nhiều)
+### Task 6.1: API documentation — ✅ HOÀN THÀNH
+- [x] Swagger/OpenAPI spec tự động (swagger-jsdoc + swagger-ui-express)
 
-### Task 6.2: Testing
-- Unit tests: Parser regex, Haversine calculation, business logic trong service (`{module}.service.test.ts`)
-- Integration tests: Webhook flow end-to-end (supertest)
-- Kafka tests: mock producer/consumer
+### Task 6.2: Testing — ✅ HOÀN THÀNH
+- [x] Unit tests: Parser regex, Haversine calculation, business logic trong service (`{module}.service.test.ts`)
+- [x] Integration tests: Webhook flow end-to-end (supertest) và follow/confirmation button click
+- [x] Kafka tests: Mock producer/consumer và integration testing
 
-### Task 6.3: Observability
-- Health check endpoint: `/health` (PG, Redis, Kafka status)
-- Request logging middleware (correlation ID)
-- Metrics endpoint cho Prometheus (optional)
+### Task 6.3: Observability — ✅ HOÀN THÀNH
+- [x] Health check endpoint: `/health` (PG, Redis, Kafka status)
+- [x] Request logging middleware (correlation ID) và header propagation
 
-### Task 6.4: Security
-- Rate limiting webhook endpoint (express-rate-limit)
-- Helmet middleware
-- Input sanitization
-- Webhook signature verification
+### Task 6.4: Security — ✅ HOÀN THÀNH
+- [x] Rate limiting webhook endpoint (express-rate-limit)
+- [x] Helmet middleware
+- [x] Input validation với Zod schemas
+- [x] Webhook signature verification
 
-### Task 6.5: Zalo OA Real Integration (Phần B — Shipper Confirmation)
+### Task 6.5: Zalo OA Real Integration (Phần B — Shipper Confirmation) — ✅ HOÀN THÀNH
 
 > Đây là phần kết nối thật với Zalo OA, hoàn thiện tính năng Shipper Confirmation đã xây dựng core logic ở Phase 2.5.
 
@@ -579,8 +577,8 @@ Các endpoint REST lấy **vị trí hiện tại tức thời** từ Redis Geo,
 | Phase 4 | 2-3 ngày | Geofencing & Completion | ✅ Done |
 | Phase 4.5 | 1 ngày | Order List API & WebSocket Protocol Spec | ✅ Done |
 | Phase 5 | 2-3 ngày | Revenue & Kafka | ✅ Done |
-| Phase 6 | 3-5 ngày | Polish, Hardening & Zalo OA Integration | 👉 Next |
-| Phase 7 | 2-3 ngày | Tracking & Dashboard APIs | 🔲 Planned |
+| Phase 6 | 3-5 ngày | Polish, Hardening & Zalo OA Integration | ✅ Done |
+| Phase 7 | 2-3 ngày | Tracking & Dashboard APIs | 👉 Next |
 | **Tổng** | **~27-37 ngày** | | |
 
 ---

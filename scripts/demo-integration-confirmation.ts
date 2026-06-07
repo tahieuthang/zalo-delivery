@@ -30,9 +30,23 @@ import { getRoute } from '../src/infra/osrm/osrm-client';
  *    👉 TRÊN WINDOWS POWERSHELL:
  *       - Chấp nhận đơn (ACCEPT):
  *         Invoke-RestMethod -Uri "http://localhost:3000/api/dispatcher/respond" -Method Post -Headers @{"Content-Type"="application/json"} -Body '{"orderId": "order-real-demo", "shipperId": "shipper-real-demo", "action": "accept"}'
+ *       hoặc gửi bằng Postman http://localhost:3000/api/dispatcher/respond
+ *       body (json):
+ *          {
+ *            "orderId": "order-real-demo",
+ *            "shipperId": "shipper-real-demo",
+ *            "action": "accept"
+ *          }
  *
  *       - Từ chối đơn (REJECT):
  *         Invoke-RestMethod -Uri "http://localhost:3000/api/dispatcher/respond" -Method Post -Headers @{"Content-Type"="application/json"} -Body '{"orderId": "order-real-demo", "shipperId": "shipper-real-demo", "action": "reject"}'
+ *       hoặc gửi bằng Postman http://localhost:3000/api/dispatcher/respond
+ *       body (json):
+ *          {
+ *            "orderId": "order-real-demo",
+ *            "shipperId": "shipper-real-demo",
+ *            "action": "reject"
+ *          }
  *
  *    👉 TRÊN CMD / BASH / LINUX (CURL):
  *       - Chấp nhận đơn (ACCEPT):
@@ -259,7 +273,7 @@ async function main() {
     if (selectedAction === 'accept' || selectedAction === 'reject') {
       console.log(`\n⏳ [TỰ ĐỘNG] Đang chờ 3 giây rồi gửi hành động ${selectedAction.toUpperCase()}...`);
       await new Promise(resolve => setTimeout(resolve, 3000));
-      
+
       try {
         const response = await fetch('http://localhost:3000/api/dispatcher/respond', {
           method: 'POST',
