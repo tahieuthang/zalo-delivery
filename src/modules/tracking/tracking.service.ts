@@ -7,7 +7,7 @@ import { KAFKA_TOPICS } from '@infra/kafka/topics';
 import logger from '@shared/logger/logger';
 import { ulid } from '@shared/utils/id-generator';
 
-function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+export function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000; // Earth's radius in meters
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
