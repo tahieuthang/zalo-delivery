@@ -30,6 +30,10 @@ vi.mock('@infra/redis/dedup.service', () => ({
   isNew: vi.fn().mockResolvedValue(true),
 }));
 
+vi.mock('@infra/zalo/zalo-token.service', () => ({
+  getAccessToken: vi.fn().mockResolvedValue('mock-access-token'),
+}));
+
 vi.mock('@modules/dispatcher/dispatcher.service', () => ({
   handleShipperResponse: vi.fn().mockResolvedValue({ success: true }),
 }));
@@ -37,6 +41,10 @@ vi.mock('@modules/dispatcher/dispatcher.service', () => ({
 describe('Webhook Service Integration (Task 6.2 & 6.5)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ error: 0, data: { displayName: 'Shipper A' } }),
+    }));
   });
 
   it('should process a follow event and link follower to shipper', async () => {
