@@ -5,6 +5,7 @@ import { router as shipperRouter, initModule as initShipper } from '@modules/shi
 import { router as dispatcherRouter, initModule as initDispatcher } from '@modules/dispatcher';
 import { router as trackingRouter, initModule as initTracking } from '@modules/tracking';
 import { router as revenueRouter, initModule as initRevenue } from '@modules/revenue';
+import { router as dashboardRouter, initModule as initDashboard } from '@modules/dashboard';
 import { docsRouter } from '@infra/docs/swagger';
 import { prisma } from '@infra/database/prisma-client';
 import { redis } from '@infra/redis/redis-client';
@@ -75,6 +76,7 @@ router.use(shipperRouter);
 router.use(dispatcherRouter);
 router.use(trackingRouter);
 router.use(revenueRouter);
+router.use(dashboardRouter);
 
 
 // Initialize all modules
@@ -85,6 +87,7 @@ export async function initModules(): Promise<void> {
   await initDispatcher();
   await initTracking();
   await initRevenue();
+  await initDashboard();
 }
 
 
