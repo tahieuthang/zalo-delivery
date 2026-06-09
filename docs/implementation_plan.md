@@ -502,58 +502,58 @@ curl -X POST localhost:3000/api/dispatcher/respond \
 
 ---
 
-## Phase 7 — Tracking & Dashboard APIs (2-3 ngày)
+## Phase 7 — Tracking & Dashboard APIs (2-3 ngày) — ✅ HOÀN THÀNH 100%
 
 > **Mục tiêu**: Xây dựng các API phục vụ frontend dashboard quản trị và app tracking theo dõi đơn hàng. Dữ liệu trajectory (lịch sử hành trình GPS) đã được ghi xuống DB ở Phase 3-4, phase này expose chúng ra qua REST API.
 
-### Task 7.1: Trajectory History API
+### Task 7.1: Trajectory History API — ✅ HOÀN THÀNH
 
 API truy xuất lịch sử hành trình GPS đã ghi (bảng `trajectory_points`) cho từng đơn hàng:
 
-- `GET /api/orders/:id/trajectory` — Lấy toàn bộ trajectory points của đơn hàng theo thứ tự thời gian
+- [x] `GET /api/orders/:id/trajectory` — Lấy toàn bộ trajectory points của đơn hàng theo thứ tự thời gian
   - Response: `{ data: [{ lat, lng, createdAt }, ...] }`
   - Có thể dùng để vẽ lại hành trình trên bản đồ (map replay)
-- `tracking.repository.ts` — Prisma query `findMany` trên `TrajectoryPoint` theo `orderId`
-- `tracking.controller.ts` + `tracking.service.ts` — Xử lý logic và route
+- [x] `tracking.repository.ts` — Prisma query `findMany` trên `TrajectoryPoint` theo `orderId`
+- [x] `tracking.controller.ts` + `tracking.service.ts` — Xử lý logic và route
 
-### Task 7.2: Order Detail Enrichment
+### Task 7.2: Order Detail Enrichment — ✅ HOÀN THÀNH
 
 Mở rộng `GET /api/orders/:id` trả về thêm thông tin liên quan:
 
-- Include shipper info (tên, SĐT, vehicleType) khi đã assign — dùng Prisma `include: { shipper: true }`
-- Include số lượng trajectory points đã ghi
-- Include thông tin doanh thu (revenue record) nếu đơn đã hoàn thành
-- Tạo response type mới `OrderDetailResponse` mở rộng từ `OrderResponse`
+- [x] Include shipper info (tên, SĐT, vehicleType) khi đã assign — dùng Prisma `include: { shipper: true }`
+- [x] Include số lượng trajectory points đã ghi
+- [x] Include thông tin doanh thu (revenue record) nếu đơn đã hoàn thành
+- [x] Tạo response type mới `OrderDetailResponse` mở rộng từ `OrderResponse`
 
-### Task 7.3: Order Filtering & Pagination
+### Task 7.3: Order Filtering & Pagination — ✅ HOÀN THÀNH
 
 Nâng cấp `GET /api/orders` hiện tại thêm query params:
 
-- `?status=PENDING,ASSIGNED,DELIVERING` — Lọc theo trạng thái (nhiều trạng thái, phân cách bởi dấu phẩy)
-- `?shipperId=xxx` — Lọc đơn theo shipper
-- `?from=&to=` — Lọc theo khoảng thời gian tạo đơn
-- `?page=1&limit=20` — Phân trang (offset-based)
-- Response format: `{ data: [...], meta: { total, page, limit, totalPages } }`
+- [x] `?status=PENDING,ASSIGNED,DELIVERING` — Lọc theo trạng thái (nhiều trạng thái, phân cách bởi dấu phẩy)
+- [x] `?shipperId=xxx` — Lọc đơn theo shipper
+- [x] `?from=&to=` — Lọc theo khoảng thời gian tạo đơn
+- [x] `?page=1&limit=20` — Phân trang (offset-based)
+- [x] Response format: `{ data: [...], meta: { total, page, limit, totalPages } }`
 
-### Task 7.4: Dashboard Summary API
+### Task 7.4: Dashboard Summary API — ✅ HOÀN THÀNH
 
 Endpoint tổng hợp dữ liệu thống kê cho trang quản trị:
 
-- `GET /api/dashboard/summary` — Trả về:
+- [x] `GET /api/dashboard/summary` — Trả về:
   - Tổng số đơn hàng theo từng trạng thái (PENDING, ASSIGNED, DELIVERING, SUCCESS, FAILED, NO_SHIPPER)
   - Số shipper đang ONLINE / OFFLINE / BUSY
   - Tổng doanh thu (nếu Phase 5 đã hoàn thành)
-- Caching vào Redis với TTL 30s để tránh query nặng liên tục
+- [x] Caching vào Redis với TTL 30s để tránh query nặng liên tục
 
-### Task 7.5: Live Position Snapshot APIs (REST bổ trợ WebSocket)
+### Task 7.5: Live Position Snapshot APIs (REST bổ trợ WebSocket) — ✅ HOÀN THÀNH
 
 Các endpoint REST lấy **vị trí hiện tại tức thời** từ Redis Geo, phục vụ admin dashboard khi mở trang lần đầu (trước khi WebSocket stream bắt đầu):
 
-- `GET /api/orders/:id/tracking` — Vị trí hiện tại của shipper đang giao đơn hàng cụ thể
+- [x] `GET /api/orders/:id/tracking` — Vị trí hiện tại của shipper đang giao đơn hàng cụ thể
   - Query Redis `GEOPOS shipper:locations {shipperId}` (shipperId lấy từ order)
   - Trả kèm: tọa độ điểm giao, tên shipper, trạng thái đơn hàng
   - Validation: đơn phải ở trạng thái `ASSIGNED` hoặc `DELIVERING`
-- `GET /api/shippers/:id/location` — Vị trí hiện tại của 1 shipper bất kỳ
+- [x] `GET /api/shippers/:id/location` — Vị trí hiện tại của 1 shipper bất kỳ
   - Dùng cho bản đồ tổng quan hiển thị tất cả shipper online
   - Query Redis `GEOPOS shipper:locations {shipperId}`
   - Trả kèm: tên, trạng thái (ONLINE/OFFLINE/BUSY)
@@ -578,7 +578,7 @@ Các endpoint REST lấy **vị trí hiện tại tức thời** từ Redis Geo,
 | Phase 4.5 | 1 ngày | Order List API & WebSocket Protocol Spec | ✅ Done |
 | Phase 5 | 2-3 ngày | Revenue & Kafka | ✅ Done |
 | Phase 6 | 3-5 ngày | Polish, Hardening & Zalo OA Integration | ✅ Done |
-| Phase 7 | 2-3 ngày | Tracking & Dashboard APIs | 👉 Next |
+| Phase 7 | 2-3 ngày | Tracking & Dashboard APIs | ✅ Done |
 | **Tổng** | **~27-37 ngày** | | |
 
 ---
