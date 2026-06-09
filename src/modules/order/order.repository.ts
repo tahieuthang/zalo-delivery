@@ -1,5 +1,5 @@
 import { prisma } from '@infra/database/prisma-client';
-import { Prisma } from '@prisma/client';
+import { Prisma, OrderStatus } from '@prisma/client';
 
 /**
  * Create a new order in PostgreSQL database.
@@ -61,5 +61,51 @@ export async function findAll() {
       createdAt: 'desc',
     },
   });
+}
+
+/**
+ * Find and count orders matching filters with offset-based pagination.
+ */
+export async function findAndCount(params: {
+  statuses?: OrderStatus[];
+  shipperId?: string;
+  from?: Date;
+  to?: Date;
+  skip?: number;
+  take?: number;
+}) {
+  const where: Prisma.OrderWhereInput = {
+    deletedAt: null,
+  };
+
+  if (params.statuses) {
+    where.status = { in: params.statuses };
+  }
+
+  if (params.shipperId) {
+    where.shipperId = params.shipperId;
+  }
+
+  if (params.from || params.to) {
+    where.createdAt = {};
+    if (params.from) {
+      where.createdAt.gte = params.from;
+    }
+    if (params.to) {
+      where.createdAt.lte = params.to;
+    }
+  }
+
+  const [total, data] = await prisma.$transaction([
+    prisma.order.count({ where }),
+    prisma.order.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: params.skip,
+      take: params.take,
+    }),
+  ]);
+
+  return { total, data };
 }
 

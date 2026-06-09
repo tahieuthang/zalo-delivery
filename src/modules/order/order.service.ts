@@ -166,23 +166,81 @@ export async function setOrderNoShipper(orderId: string): Promise<void> {
 }
 
 /**
- * Retrieve all orders.
+ * Retrieve all orders matching filters with pagination.
  */
-export async function getOrders(): Promise<OrderResponse[]> {
-  const orders = await orderRepo.findAll();
-  return orders.map((order) => ({
-    id: order.id,
-    customerId: order.customerId,
-    pickupAddress: order.pickupAddress,
-    pickupLat: order.pickupLat,
-    pickupLng: order.pickupLng,
-    deliveryAddress: order.deliveryAddress,
-    deliveryLat: order.deliveryLat,
-    deliveryLng: order.deliveryLng,
-    status: order.status as OrderStatus,
-    note: order.note,
-    createdAt: order.createdAt.toISOString(),
-  }));
+export async function getOrders(filter: {
+  status?: string;
+  shipperId?: string;
+  from?: string;
+  to?: string;
+  page?: string | number;
+  limit?: string | number;
+} = {}) {
+  const page = filter.page ? Math.max(1, parseInt(String(filter.page), 10) || 1) : 1;
+  const limit = filter.limit ? Math.max(1, parseInt(String(filter.limit), 10) || 20) : 20;
+  const skip = (page - 1) * limit;
+
+  // Parse and validate statuses
+  let statuses: OrderStatus[] | undefined;
+  if (filter.status) {
+    const validStatuses: OrderStatus[] = [
+      'PENDING',
+      'WAITING_ACCEPTANCE',
+      'ASSIGNED',
+      'DELIVERING',
+      'SUCCESS',
+      'FAILED',
+      'NO_SHIPPER',
+    ];
+    statuses = filter.status
+      .split(',')
+      .map((s) => s.trim().toUpperCase() as OrderStatus)
+      .filter((s) => validStatuses.includes(s));
+  }
+
+  // Parse dates
+  const from = filter.from ? new Date(filter.from) : undefined;
+  const to = filter.to ? new Date(filter.to) : undefined;
+
+  if (from && isNaN(from.getTime())) {
+    throw new AppError(400, ErrorCode.INVALID_INPUT, 'Tham số "from" không đúng định dạng ngày tháng');
+  }
+  if (to && isNaN(to.getTime())) {
+    throw new AppError(400, ErrorCode.INVALID_INPUT, 'Tham số "to" không đúng định dạng ngày tháng');
+  }
+
+  const { total, data } = await orderRepo.findAndCount({
+    statuses,
+    shipperId: filter.shipperId,
+    from,
+    to,
+    skip,
+    take: limit,
+  });
+
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    data: data.map((order) => ({
+      id: order.id,
+      customerId: order.customerId,
+      pickupAddress: order.pickupAddress,
+      pickupLat: order.pickupLat,
+      pickupLng: order.pickupLng,
+      deliveryAddress: order.deliveryAddress,
+      deliveryLat: order.deliveryLat,
+      deliveryLng: order.deliveryLng,
+      status: order.status as OrderStatus,
+      note: order.note,
+      createdAt: order.createdAt.toISOString(),
+    })),
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages,
+    },
+  };
 }
 
 

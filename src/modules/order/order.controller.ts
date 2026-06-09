@@ -30,8 +30,8 @@ orderRouter.get(
   '/',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await orderService.getOrders();
-      res.status(200).json({ data: result });
+      const result = await orderService.getOrders(req.query);
+      res.status(200).json(result);
     } catch (err) {
       next(err);
     }
