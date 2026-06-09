@@ -18,3 +18,19 @@ trackingRouter.get(
     }
   },
 );
+
+/**
+ * Get live tracking snapshot of a specific order.
+ * GET /api/orders/:id/tracking
+ */
+trackingRouter.get(
+  '/orders/:id/tracking',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await trackingService.getLiveTracking(req.params.id);
+      res.status(200).json({ data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+);

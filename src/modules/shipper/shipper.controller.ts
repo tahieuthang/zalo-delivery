@@ -107,3 +107,19 @@ shipperRouter.patch(
     }
   },
 );
+
+/**
+ * Get shipper live location.
+ * GET /api/shippers/:id/location
+ */
+shipperRouter.get(
+  '/:id/location',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await shipperService.getShipperLiveLocation(req.params.id);
+      res.status(200).json({ data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+);

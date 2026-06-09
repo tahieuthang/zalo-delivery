@@ -58,3 +58,16 @@ export async function markShipperFree(shipperId: string): Promise<void> {
 export async function isShipperBusy(shipperId: string): Promise<boolean> {
   return (await redis.sismember(BUSY_KEY, shipperId)) === 1;
 }
+
+export async function getShipperLocation(
+  shipperId: string,
+): Promise<{ lat: number; lng: number } | null> {
+  const pos = await redis.geopos(GEO_KEY, shipperId);
+  if (!pos || pos.length === 0 || !pos[0]) return null;
+  const [lngStr, latStr] = pos[0];
+  if (!lngStr || !latStr) return null;
+  return {
+    lng: parseFloat(lngStr),
+    lat: parseFloat(latStr),
+  };
+}

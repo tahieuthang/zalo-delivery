@@ -1,6 +1,6 @@
 import { prisma } from '@infra/database/prisma-client';
 import { redis } from '@infra/redis/redis-client';
-import { markShipperFree } from '@infra/redis/geo.service';
+import { markShipperFree, getShipperLocation } from '@infra/redis/geo.service';
 import { notificationService } from '@infra/notification';
 import { producer } from '@infra/kafka/producer';
 import { KAFKA_TOPICS } from '@infra/kafka/topics';
@@ -159,4 +159,45 @@ export async function getTrajectoryByOrderId(orderId: string) {
     lng: p.lng,
     createdAt: p.createdAt.toISOString(),
   }));
+}
+
+/**
+ * Retrieve live tracking snapshot for an order.
+ */
+export async function getLiveTracking(orderId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId, deletedAt: null },
+    include: { shipper: true },
+  });
+
+  if (!order) {
+    throw new AppError(404, ErrorCode.ORDER_NOT_FOUND, `Không tìm thấy đơn hàng với ID: ${orderId}`);
+  }
+
+  if (order.status !== 'ASSIGNED' && order.status !== 'DELIVERING') {
+    throw new AppError(
+      400,
+      ErrorCode.INVALID_INPUT,
+      'Theo dõi trực tuyến chỉ khả dụng cho đơn hàng ở trạng thái ASSIGNED hoặc DELIVERING',
+    );
+  }
+
+  if (!order.shipperId) {
+    throw new AppError(
+      400,
+      ErrorCode.INVALID_INPUT,
+      'Đơn hàng chưa được gán shipper để theo dõi trực tuyến',
+    );
+  }
+
+  const location = await getShipperLocation(order.shipperId);
+
+  return {
+    orderId: order.id,
+    status: order.status,
+    deliveryLat: order.deliveryLat,
+    deliveryLng: order.deliveryLng,
+    shipperName: order.shipper?.name || null,
+    shipperLocation: location,
+  };
 }

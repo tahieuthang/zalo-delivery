@@ -13,6 +13,7 @@ import {
   addShipperLocation,
   removeShipperLocation,
   markShipperFree,
+  getShipperLocation,
 } from '@infra/redis/geo.service';
 import logger from '@shared/logger/logger';
 
@@ -124,4 +125,23 @@ export async function toggleStatus(
   }
 
   return mapToResponse(updated);
+}
+
+/**
+ * Retrieve the live location of a shipper.
+ */
+export async function getShipperLiveLocation(id: string) {
+  const shipper = await shipperRepo.findById(id);
+  if (!shipper) {
+    throw new AppError(404, ErrorCode.SHIPPER_NOT_FOUND, `Không tìm thấy tài xế với ID: ${id}`);
+  }
+
+  const location = await getShipperLocation(id);
+
+  return {
+    id: shipper.id,
+    name: shipper.name,
+    status: shipper.status,
+    location,
+  };
 }
