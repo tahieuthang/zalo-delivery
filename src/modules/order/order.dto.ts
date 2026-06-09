@@ -16,7 +16,15 @@ export const OrderResponseDto = z.object({
   deliveryAddress: z.string(),
   deliveryLat: z.number().nullable(),
   deliveryLng: z.number().nullable(),
-  status: z.enum(['PENDING', 'ASSIGNED', 'DELIVERING', 'SUCCESS', 'FAILED', 'NO_SHIPPER']),
+  status: z.enum([
+    'PENDING',
+    'WAITING_ACCEPTANCE',
+    'ASSIGNED',
+    'DELIVERING',
+    'SUCCESS',
+    'FAILED',
+    'NO_SHIPPER',
+  ]),
   note: z.string().nullable(),
   createdAt: z.string(),
 });
@@ -40,4 +48,25 @@ export const OrderCreatedEventSchema = z.object({
     correlationId: z.string(),
     timestamp: z.string().datetime(),
   }),
+});
+
+export const OrderDetailResponseDto = OrderResponseDto.extend({
+  shipper: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      phone: z.string(),
+      vehicleType: z.string(),
+    })
+    .nullable(),
+  trajectoryCount: z.number(),
+  revenues: z.array(
+    z.object({
+      id: z.string(),
+      amount: z.number(),
+      type: z.string(),
+      completedAt: z.string(),
+      createdAt: z.string(),
+    }),
+  ),
 });

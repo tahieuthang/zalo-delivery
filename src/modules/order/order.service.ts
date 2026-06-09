@@ -2,7 +2,7 @@ import { ulid } from '@shared/utils/id-generator';
 import { AppError } from '@shared/errors/app-error';
 import { ErrorCode } from '@shared/errors/error-codes';
 import * as orderRepo from '@modules/order/order.repository';
-import type { CreateOrderInput, OrderResponse, OrderStatus } from '@modules/order/order.types';
+import type { CreateOrderInput, OrderResponse, OrderStatus, OrderDetailResponse } from '@modules/order/order.types';
 import { geocode } from '@infra/geocoding/geocoding.service';
 import { producer } from '@infra/kafka/producer';
 import { KAFKA_TOPICS } from '@infra/kafka/topics';
@@ -107,8 +107,8 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderRespons
 /**
  * Retrieve order details by ID.
  */
-export async function getOrderById(id: string): Promise<OrderResponse> {
-  const order = await orderRepo.findById(id);
+export async function getOrderById(id: string): Promise<OrderDetailResponse> {
+  const order = await orderRepo.findDetailedById(id);
   if (!order) {
     throw new AppError(404, ErrorCode.ORDER_NOT_FOUND, `Không tìm thấy đơn hàng với ID: ${id}`);
   }
@@ -125,6 +125,22 @@ export async function getOrderById(id: string): Promise<OrderResponse> {
     status: order.status as OrderStatus,
     note: order.note,
     createdAt: order.createdAt.toISOString(),
+    shipper: order.shipper
+      ? {
+          id: order.shipper.id,
+          name: order.shipper.name,
+          phone: order.shipper.phone,
+          vehicleType: order.shipper.vehicleType,
+        }
+      : null,
+    trajectoryCount: order._count.trajectory,
+    revenues: order.revenues.map((r) => ({
+      id: r.id,
+      amount: r.amount,
+      type: r.type,
+      completedAt: r.completedAt.toISOString(),
+      createdAt: r.createdAt.toISOString(),
+    })),
   };
 }
 

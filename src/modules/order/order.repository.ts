@@ -21,6 +21,25 @@ export async function findById(id: string) {
 }
 
 /**
+ * Find an order by ID with enriched details (shipper, revenue, trajectory count).
+ */
+export async function findDetailedById(id: string) {
+  return prisma.order.findUnique({
+    where: {
+      id,
+      deletedAt: null,
+    },
+    include: {
+      shipper: true,
+      revenues: true,
+      _count: {
+        select: { trajectory: true },
+      },
+    },
+  });
+}
+
+/**
  * Update an existing order.
  */
 export async function update(id: string, data: Prisma.OrderUpdateInput) {
