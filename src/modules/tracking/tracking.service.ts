@@ -6,6 +6,9 @@ import { producer } from '@infra/kafka/producer';
 import { KAFKA_TOPICS } from '@infra/kafka/topics';
 import logger from '@shared/logger/logger';
 import { ulid } from '@shared/utils/id-generator';
+import { AppError } from '@shared/errors/app-error';
+import { ErrorCode } from '@shared/errors/error-codes';
+import * as trackingRepo from '@modules/tracking/tracking.repository';
 
 export function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000; // Earth's radius in meters
@@ -137,4 +140,23 @@ export async function processGeofencing(
   } catch (err) {
     logger.error({ err, orderId, shipperId }, 'Error processing geofencing and order completion');
   }
+}
+
+/**
+ * Retrieve trajectory history for an order.
+ */
+export async function getTrajectoryByOrderId(orderId: string) {
+  const orderExists = await prisma.order.findUnique({
+    where: { id: orderId, deletedAt: null },
+  });
+  if (!orderExists) {
+    throw new AppError(404, ErrorCode.ORDER_NOT_FOUND, `Không tìm thấy đơn hàng với ID: ${orderId}`);
+  }
+
+  const points = await trackingRepo.findByOrderId(orderId);
+  return points.map((p) => ({
+    lat: p.lat,
+    lng: p.lng,
+    createdAt: p.createdAt.toISOString(),
+  }));
 }
