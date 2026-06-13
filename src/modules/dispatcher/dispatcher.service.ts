@@ -145,6 +145,16 @@ export async function offerOrderToNextCandidate(orderId: string, correlationId: 
     data: { status: 'WAITING_ACCEPTANCE' },
   });
 
+  // Create OrderOfferLog record
+  await prisma.orderOfferLog.create({
+    data: {
+      id: ulid(),
+      orderId,
+      shipperId,
+      status: 'PENDING',
+    },
+  });
+
   // Lock order with pending key for 30s
   const pendingKey = `order:pending_accept:${orderId}`;
   // Set lock TTL to 35s (5s buffer over the 30s business timeout) to prevent race condition with setTimeout
@@ -174,7 +184,20 @@ export async function offerOrderToNextCandidate(orderId: string, correlationId: 
     try {
       const lockedShipperId = await redis.get(pendingKey);
       if (lockedShipperId === shipperId) {
-        logger.info({ orderId, shipperId }, 'Confirmation timeout reached (30s) — Triggering auto-reject');
+        logger.info({ orderId, shipperId }, 'Confirmation timeout reached (30s) - Triggering auto-reject');
+        
+        // Update OrderOfferLog status to TIMEOUT
+        await prisma.orderOfferLog.updateMany({
+          where: {
+            orderId,
+            shipperId,
+            status: 'PENDING',
+          },
+          data: {
+            status: 'TIMEOUT',
+          },
+        });
+
         await notificationService.sendTimeoutNotice(shipper, orderId);
         await handleShipperResponse(orderId, shipperId, 'reject', correlationId);
       }
@@ -221,8 +244,20 @@ export async function handleShipperResponse(
   }
 
   if (action === 'accept') {
-    // 🟢 Case ACCEPT:
+    // Case ACCEPT:
     logger.info({ orderId, shipperId }, 'Shipper accepted order offer');
+
+    // Update OrderOfferLog status to ACCEPTED
+    await prisma.orderOfferLog.updateMany({
+      where: {
+        orderId,
+        shipperId,
+        status: 'PENDING',
+      },
+      data: {
+        status: 'ACCEPTED',
+      },
+    });
 
     // Update order status to ASSIGNED in DB
     await prisma.order.update({
@@ -284,8 +319,25 @@ export async function handleShipperResponse(
 
     return { success: true };
   } else {
-    // 🔴 Case REJECT:
+    // Case REJECT:
     logger.info({ orderId, shipperId }, 'Shipper rejected order offer');
+
+    // Update OrderOfferLog status to REJECTED (only if pending)
+    const pendingLog = await prisma.orderOfferLog.findFirst({
+      where: {
+        orderId,
+        shipperId,
+        status: 'PENDING',
+      },
+    });
+    if (pendingLog) {
+      await prisma.orderOfferLog.update({
+        where: { id: pendingLog.id },
+        data: {
+          status: 'REJECTED',
+        },
+      });
+    }
 
     // Cooldown shipper for 15 mins (900 seconds)
     const cooldownKey = `shipper:cooldown:${shipperId}`;

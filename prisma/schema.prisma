@@ -33,6 +33,7 @@ model Order {
   revenues RevenueRecord[]
   messages MessageLog[]
   trajectory TrajectoryPoint[]
+  offerLogs  OrderOfferLog[]
 
   @@index([status])
   @@index([shipperId])
@@ -78,6 +79,7 @@ model Shipper {
   deletedAt     DateTime?     @map("deleted_at")
 
   orders   Order[]
+  offerLogs OrderOfferLog[]
   revenues RevenueRecord[]
 
   @@index([status])
@@ -123,4 +125,30 @@ model RevenueRecord {
 
   @@index([shipperId])
   @@map("revenue")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Order Offer Logs (Lưu vết điều phối shipper)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model OrderOfferLog {
+  id         String          @id
+  orderId    String          @map("order_id")
+  shipperId  String          @map("shipper_id")
+  status     OfferLogStatus
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  shipper Shipper @relation(fields: [shipperId], references: [id])
+
+  @@index([orderId])
+  @@map("order_offer_logs")
+}
+
+enum OfferLogStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  TIMEOUT
 }

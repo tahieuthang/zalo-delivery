@@ -69,4 +69,17 @@ export const OrderDetailResponseDto = OrderResponseDto.extend({
       createdAt: z.string(),
     }),
   ),
+  offerLogs: z.array(
+    z.object({
+      id: z.string(),
+      shipperId: z.string(),
+      status: z.enum(['PENDING', 'ACCEPTED', 'REJECTED', 'TIMEOUT']),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+      shipper: z.object({
+        name: z.string(),
+        phone: z.string(),
+      }),
+    }),
+  ),
 });

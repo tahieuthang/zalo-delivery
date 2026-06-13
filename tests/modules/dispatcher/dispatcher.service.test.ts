@@ -29,6 +29,12 @@ vi.mock('@infra/database/prisma-client', () => ({
     shipper: {
       findUnique: vi.fn(),
     },
+    orderOfferLog: {
+      create: vi.fn(),
+      updateMany: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+    },
   },
 }));
 vi.mock('@infra/notification', () => ({

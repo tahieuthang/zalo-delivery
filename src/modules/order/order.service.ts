@@ -141,6 +141,19 @@ export async function getOrderById(id: string): Promise<OrderDetailResponse> {
       completedAt: r.completedAt.toISOString(),
       createdAt: r.createdAt.toISOString(),
     })),
+    offerLogs: (order as any).offerLogs
+      ? (order as any).offerLogs.map((log: any) => ({
+          id: log.id,
+          shipperId: log.shipperId,
+          status: log.status,
+          createdAt: log.createdAt.toISOString(),
+          updatedAt: log.updatedAt.toISOString(),
+          shipper: {
+            name: log.shipper.name,
+            phone: log.shipper.phone,
+          },
+        }))
+      : [],
   };
 }
 

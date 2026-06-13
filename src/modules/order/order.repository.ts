@@ -32,6 +32,19 @@ export async function findDetailedById(id: string) {
     include: {
       shipper: true,
       revenues: true,
+      offerLogs: {
+        include: {
+          shipper: {
+            select: {
+              name: true,
+              phone: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      },
       _count: {
         select: { trajectory: true },
       },
