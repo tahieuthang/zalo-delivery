@@ -115,7 +115,7 @@ orderRouter.get(
  * /api/orders/{id}:
  *   get:
  *     summary: Get order details by ID
- *     description: Retrieve detailed information of an order including assigned shipper, trajectory count, and revenue data.
+ *     description: Retrieve detailed information of an order including assigned shipper, trajectory count, revenue data, and shipper dispatch offer history (offerLogs).
  *     tags:
  *       - Order
  *     parameters:
