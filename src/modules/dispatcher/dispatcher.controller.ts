@@ -9,8 +9,16 @@ import { KAFKA_TOPICS } from '@infra/kafka/topics';
 export const dispatcherRouter = Router();
 
 /**
- * Health status check.
- * GET /api/dispatcher/status
+ * @openapi
+ * /api/dispatcher/status:
+ *   get:
+ *     summary: Get dispatcher status
+ *     description: Check if the dispatcher Kafka consumer is active.
+ *     tags:
+ *       - Dispatcher
+ *     responses:
+ *       200:
+ *         description: Success
  */
 dispatcherRouter.get(
   '/status',
@@ -29,8 +37,16 @@ dispatcherRouter.get(
 );
 
 /**
- * Consumer lag check.
- * GET /api/dispatcher/lag
+ * @openapi
+ * /api/dispatcher/lag:
+ *   get:
+ *     summary: Get dispatcher consumer lag
+ *     description: Check partition offsets and lag for the dispatcher-service consumer group.
+ *     tags:
+ *       - Dispatcher
+ *     responses:
+ *       200:
+ *         description: Success
  */
 dispatcherRouter.get(
   '/lag',
@@ -44,10 +60,34 @@ dispatcherRouter.get(
   },
 );
 
-
 /**
- * Developer helper route to manually trigger order dispatch logic.
- * POST /api/dispatcher/trigger
+ * @openapi
+ * /api/dispatcher/trigger:
+ *   post:
+ *     summary: Manually trigger order dispatch (Dev Helper)
+ *     description: Construct a mock order.created event and execute dispatch logic directly.
+ *     tags:
+ *       - Dispatcher
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orderId
+ *               - pickupLat
+ *               - pickupLng
+ *             properties:
+ *               orderId:
+ *                 type: string
+ *               pickupLat:
+ *                 type: number
+ *               pickupLng:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Success
  */
 dispatcherRouter.post(
   '/trigger',
@@ -99,8 +139,36 @@ dispatcherRouter.post(
 );
 
 /**
- * Handle shipper accept/reject responses.
- * POST /api/dispatcher/respond
+ * @openapi
+ * /api/dispatcher/respond:
+ *   post:
+ *     summary: Handle shipper accept/reject response
+ *     description: Process shipper's response to an order offer. Updates order to ASSIGNED on accept, or triggers routing to next candidate on reject.
+ *     tags:
+ *       - Dispatcher
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orderId
+ *               - shipperId
+ *               - action
+ *             properties:
+ *               orderId:
+ *                 type: string
+ *               shipperId:
+ *                 type: string
+ *               action:
+ *                 type: string
+ *                 enum: [accept, reject]
+ *     responses:
+ *       200:
+ *         description: Success
+ *       400:
+ *         description: Invalid action or order expired
  */
 dispatcherRouter.post(
   '/respond',
@@ -123,4 +191,3 @@ dispatcherRouter.post(
     }
   },
 );
-

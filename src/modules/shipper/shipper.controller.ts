@@ -10,8 +10,34 @@ import * as shipperService from '@modules/shipper/shipper.service';
 export const shipperRouter = Router();
 
 /**
- * Create a new shipper.
- * POST /api/shippers
+ * @openapi
+ * /api/shippers:
+ *   post:
+ *     summary: Create a new shipper
+ *     description: Register a new shipper with vehicle details.
+ *     tags:
+ *       - Shipper
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - phone
+ *               - vehicleType
+ *             properties:
+ *               name:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               vehicleType:
+ *                 type: string
+ *                 enum: [BIKE, MOTORCYCLE, TRUCK]
+ *     responses:
+ *       201:
+ *         description: Created
  */
 shipperRouter.post(
   '/',
@@ -27,8 +53,16 @@ shipperRouter.post(
 );
 
 /**
- * Get all shippers.
- * GET /api/shippers
+ * @openapi
+ * /api/shippers:
+ *   get:
+ *     summary: Get all shippers
+ *     description: Retrieve list of all shippers in the system.
+ *     tags:
+ *       - Shipper
+ *     responses:
+ *       200:
+ *         description: Success
  */
 shipperRouter.get(
   '/',
@@ -43,8 +77,25 @@ shipperRouter.get(
 );
 
 /**
- * Get shipper details by ID.
- * GET /api/shippers/:id
+ * @openapi
+ * /api/shippers/{id}:
+ *   get:
+ *     summary: Get shipper details by ID
+ *     description: Retrieve profile information of a specific shipper.
+ *     tags:
+ *       - Shipper
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Shipper ID
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Shipper not found
  */
 shipperRouter.get(
   '/:id',
@@ -59,8 +110,40 @@ shipperRouter.get(
 );
 
 /**
- * Update shipper details.
- * PUT /api/shippers/:id
+ * @openapi
+ * /api/shippers/{id}:
+ *   put:
+ *     summary: Update shipper details
+ *     description: Update profile information of an existing shipper.
+ *     tags:
+ *       - Shipper
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Shipper ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               vehicleType:
+ *                 type: string
+ *               zaloUserId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Shipper not found
  */
 shipperRouter.put(
   '/:id',
@@ -76,8 +159,25 @@ shipperRouter.put(
 );
 
 /**
- * Delete a shipper.
- * DELETE /api/shippers/:id
+ * @openapi
+ * /api/shippers/{id}:
+ *   delete:
+ *     summary: Delete a shipper
+ *     description: Soft-delete a shipper profile.
+ *     tags:
+ *       - Shipper
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Shipper ID
+ *     responses:
+ *       204:
+ *         description: No Content
+ *       404:
+ *         description: Shipper not found
  */
 shipperRouter.delete(
   '/:id',
@@ -92,8 +192,43 @@ shipperRouter.delete(
 );
 
 /**
- * Toggle shipper status online/offline and update location in Redis.
- * PATCH /api/shippers/:id/status
+ * @openapi
+ * /api/shippers/{id}/status:
+ *   patch:
+ *     summary: Toggle shipper status online/offline
+ *     description: Set shipper status to ONLINE or OFFLINE. When ONLINE, adds to Redis Geo for location-based search.
+ *     tags:
+ *       - Shipper
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Shipper ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [ONLINE, OFFLINE]
+ *               lat:
+ *                 type: number
+ *                 description: Required if status is ONLINE
+ *               lng:
+ *                 type: number
+ *                 description: Required if status is ONLINE
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Shipper not found
  */
 shipperRouter.patch(
   '/:id/status',
@@ -109,8 +244,25 @@ shipperRouter.patch(
 );
 
 /**
- * Get shipper live location.
- * GET /api/shippers/:id/location
+ * @openapi
+ * /api/shippers/{id}/location:
+ *   get:
+ *     summary: Get shipper live location
+ *     description: Fetch the current latitude/longitude coordinate of an active shipper from Redis Geo.
+ *     tags:
+ *       - Shipper
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Shipper ID
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Shipper location not found in Redis
  */
 shipperRouter.get(
   '/:id/location',

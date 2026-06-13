@@ -4,8 +4,16 @@ import * as dashboardService from './dashboard.service';
 export const dashboardRouter = Router();
 
 /**
- * Get dashboard summary metrics (order counts, shipper counts, total revenue).
- * GET /api/dashboard/summary
+ * @openapi
+ * /api/dashboard/summary:
+ *   get:
+ *     summary: Get dashboard summary metrics
+ *     description: Retrieve total order counts by status, online/offline/busy shipper counts, and total system revenue (cached for 30 seconds).
+ *     tags:
+ *       - Dashboard
+ *     responses:
+ *       200:
+ *         description: Success
  */
 dashboardRouter.get(
   '/summary',
