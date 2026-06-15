@@ -5,7 +5,7 @@ import { ulid } from '@shared/utils/id-generator';
 import { AppError } from '@shared/errors/app-error';
 import { ErrorCode } from '@shared/errors/error-codes';
 import * as webhookRepo from '@modules/webhook/webhook.repository';
-import type { ZaloWebhookPayload, ParsedOrder } from '@modules/webhook/webhook.types';
+import type { ZaloWebhookPayload, ParsedOrder, ParsedOrderItem } from '@modules/webhook/webhook.types';
 import * as orderService from '@modules/order/order.service';
 import { handleShipperResponse } from '@modules/dispatcher/dispatcher.service';
 import { prisma } from '@infra/database/prisma-client';
@@ -81,6 +81,75 @@ export async function fetchZaloProfile(zaloUserId: string): Promise<string | nul
 }
 
 /**
+ * Parse individual item details from the message text (e.g. "2 trà sữa ô long, size L và size M")
+ */
+export function parseItems(
+  text: string,
+  deliveryAddress?: string,
+  pickupAddress?: string
+): ParsedOrderItem[] {
+  const items: ParsedOrderItem[] = [];
+  const lowerDeliv = deliveryAddress?.toLowerCase() || '';
+  const lowerPickup = pickupAddress?.toLowerCase() || '';
+
+  // Regex: matches quantity (digit) followed by letters/spaces for item name.
+  const itemRegex = /(?:^|[\s,.\n])(\d+)\s+([a-zA-Zà-ỹÀ-Ỹ\s\d]+?)(?=\s*(?:,|\.|\(|size|giao|địa chỉ|sđt|sdt|$))/gi;
+
+  let match;
+  while ((match = itemRegex.exec(text)) !== null) {
+    const qty = parseInt(match[1], 10);
+    const name = match[2].trim();
+
+    if (qty > 100) continue;
+
+    const lowerName = name.toLowerCase();
+    if (
+      lowerName.length < 2 ||
+      ['ngõ', 'ngách', 'hẻm', 'số', 'đường', 'phố', 'quận', 'huyện', 'tỉnh', 'phường', 'xã', 'cho', 'anh', 'em', 'chị', 'giao', 'ship', 'lấy', 'đến', 'tới'].some(
+        (kw) => lowerName === kw || lowerName.startsWith(kw + ' ')
+      )
+    ) {
+      continue;
+    }
+
+    // Filter out if this name is a substring of the parsed addresses
+    if (
+      (lowerDeliv && lowerDeliv.includes(lowerName)) ||
+      (lowerPickup && lowerPickup.includes(lowerName))
+    ) {
+      continue;
+    }
+
+    // Try to find if there is a size or note immediately following
+    const startIndex = match.index + match[0].length;
+    const remainingText = text.substring(startIndex);
+
+    const noteMatch = remainingText.match(/^\s*[,.-]?\s*([^,.\n]+?)(?=\s*(?:giao|ship|lấy|sđt|sdt|người nhận|nguoi nhan|$))/i);
+    let note = noteMatch ? noteMatch[1].trim() : undefined;
+
+    if (note) {
+      note = note.replace(/^[,\s.-]+|[,\s.-]+$/g, '').trim();
+      if (
+        !note ||
+        note.toLowerCase().includes('giao') ||
+        note.toLowerCase().includes('sđt') ||
+        note.toLowerCase().includes('địa chỉ')
+      ) {
+        note = undefined;
+      }
+    }
+
+    items.push({
+      name,
+      quantity: qty,
+      note: note || undefined,
+    });
+  }
+
+  return items;
+}
+
+/**
  * Robust Regex Parser to extract order details (Name, Phone, Delivery Address, Pickup Address)
  * handles multi-format and labeled strings.
  */
@@ -135,7 +204,17 @@ export function parseOrderMessage(text: string): ParsedOrder {
   if (!name) {
     const nameMatchNatural = cleanText.match(/(?:cho|người nhận là|khách là)\s+([^,.\n|-]+)/i);
     if (nameMatchNatural) {
-      name = nameMatchNatural[1].trim();
+      const candidate = nameMatchNatural[1].trim();
+      if (!/\d/.test(candidate)) {
+        name = candidate;
+      }
+    }
+  }
+
+  if (!name) {
+    const receiverMatch = cleanText.match(/(?:người nhận|nguoi nhan|tên|khách)\s+([a-zA-Zà-ỹÀ-Ỹ\s]+)/i);
+    if (receiverMatch) {
+      name = receiverMatch[1].trim();
     }
   }
 
@@ -220,12 +299,16 @@ export function parseOrderMessage(text: string): ParsedOrder {
     throw new Error('Không thể phân tích Địa chỉ giao hàng từ tin nhắn');
   }
 
+  // Parse items using the static helper with the resolved addresses for deduplication
+  const items = parseItems(text, deliveryAddress, pickupAddress);
+
   return {
     name,
     phone,
     deliveryAddress,
     pickupAddress,
     note,
+    items: items.length > 0 ? items : undefined,
   };
 }
 
@@ -370,6 +453,7 @@ export async function processWebhook(
         pickupAddress: parsed.pickupAddress || DEFAULT_PICKUP_ADDRESS,
         deliveryAddress: parsed.deliveryAddress,
         note: parsed.note,
+        items: parsed.items,
       });
 
       await webhookRepo.createMessageLog({

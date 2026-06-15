@@ -101,4 +101,19 @@ describe('Zalo Order Message Regex Parser (Task 1.3)', () => {
     const text = 'Nguyễn Văn A - Không có sđt - 123 Lê Lợi Q1';
     expect(() => parseOrderMessage(text)).toThrow('Không tìm thấy số điện thoại hợp lệ');
   });
+
+  it('13. should parse items from the message text', () => {
+    const text = 'Cho anh 2 trà sữa ô long, size L và size M giao đến 123 Lê Lợi sđt 0912345678, người nhận anh Nam';
+    const result = parseOrderMessage(text);
+    expect(result.name).toBe('anh Nam');
+    expect(result.phone).toBe('0912345678');
+    expect(result.deliveryAddress).toBe('123 Lê Lợi');
+    expect(result.items).toBeDefined();
+    expect(result.items).toHaveLength(1);
+    expect(result.items![0]).toEqual({
+      name: 'trà sữa ô long',
+      quantity: 2,
+      note: 'size L và size M',
+    });
+  });
 });
