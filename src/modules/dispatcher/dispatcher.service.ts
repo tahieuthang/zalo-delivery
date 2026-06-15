@@ -155,10 +155,10 @@ export async function offerOrderToNextCandidate(orderId: string, correlationId: 
     },
   });
 
-  // Lock order with pending key for 30s
+  // Lock order with pending key for 70s
   const pendingKey = `order:pending_accept:${orderId}`;
-  // Set lock TTL to 35s (5s buffer over the 30s business timeout) to prevent race condition with setTimeout
-  await redis.set(pendingKey, shipperId, 'EX', 35);
+  // Set lock TTL to 75s (5s buffer over the 70s business timeout) to prevent race condition with setTimeout
+  await redis.set(pendingKey, shipperId, 'EX', 75);
 
   // Store offer meta in Redis to retrieve later
   const offerMetaKey = `order:offer_meta:${orderId}`;
@@ -179,12 +179,12 @@ export async function offerOrderToNextCandidate(orderId: string, correlationId: 
     duration: durationSeconds,
   } as any);
 
-  // 30s timeout handler
+  // 70s timeout handler
   setTimeout(async () => {
     try {
       const lockedShipperId = await redis.get(pendingKey);
       if (lockedShipperId === shipperId) {
-        logger.info({ orderId, shipperId }, 'Confirmation timeout reached (30s) - Triggering auto-reject');
+        logger.info({ orderId, shipperId }, 'Confirmation timeout reached (70s) - Triggering auto-reject');
         
         // Update OrderOfferLog status to TIMEOUT
         await prisma.orderOfferLog.updateMany({
@@ -202,9 +202,9 @@ export async function offerOrderToNextCandidate(orderId: string, correlationId: 
         await handleShipperResponse(orderId, shipperId, 'reject', correlationId);
       }
     } catch (err) {
-      logger.error({ err, orderId, shipperId }, 'Error in 30s timeout handler');
+      logger.error({ err, orderId, shipperId }, 'Error in 70s timeout handler');
     }
-  }, 30000);
+  }, 70000);
 }
 
 /**

@@ -80,42 +80,42 @@ async function main() {
     process.exit(1);
   }
 
-  // 2. Định nghĩa tọa độ thật ở Trung tâm TP. Hồ Chí Minh
-  // Điểm lấy hàng: Nhà thờ Đức Bà Sài Gòn
-  const pickup = { lat: 10.779786, lng: 106.699066, address: 'Nhà thờ Đức Bà, Quận 1, TPHCM' };
+  // 2. Định nghĩa tọa độ thực tại Trường THCS Tam Hiệp, Thanh Trì, Hà Nội
+  // Điểm lấy hàng: Trường Trung học cơ sở Tam Hiệp (Huỳnh Cung, Đại Thanh, Hà Nội)
+  const pickup = { lat: 20.953503, lng: 105.837839, address: 'Trường Trung học cơ sở Tam Hiệp (Huỳnh Cung, Đại Thanh, Hà Nội)' };
 
-  // Điểm giao hàng: Chợ Bến Thành
-  const delivery = { lat: 10.7725, lng: 106.6980, address: 'Chợ Bến Thành, Quận 1, TPHCM' };
+  // Điểm giao hàng: Chung cư Đại Thanh
+  const delivery = { lat: 20.9575, lng: 105.8285, address: 'Chung cư Đại Thanh, Thanh Trì, Hà Nội' };
 
-  // Danh sách 4 tài xế online tại Quận 1
+  // Danh sách 4 tài xế online tại khu vực lân cận quanh shop
   const testShippers = [
     {
       id: 'shipper-real-demo',
-      name: 'Trần Minh Quân (Dinh Độc Lập)',
+      name: 'Trần Minh Quân (Sân bóng Huỳnh Cung)',
       phone: '0988888888',
-      lat: 10.776994,
-      lng: 106.695311,
+      lat: 20.9545,
+      lng: 105.8358,
     },
     {
       id: 'shipper-real-demo-2',
-      name: 'Phạm Bình Minh (Bưu Điện TP)',
+      name: 'Phạm Bình Minh (UBND Xã Tam Hiệp)',
       phone: '0988888882',
-      lat: 10.779838,
-      lng: 106.699949,
+      lat: 20.9525,
+      lng: 105.8398,
     },
     {
       id: 'shipper-real-demo-3',
-      name: 'Lê Hoàng Nam (Diamond Plaza)',
+      name: 'Lê Hoàng Nam (Chùa Huỳnh Cung)',
       phone: '0988888883',
-      lat: 10.781665,
-      lng: 106.698099,
+      lat: 20.9555,
+      lng: 105.8388,
     },
     {
       id: 'shipper-real-demo-4',
-      name: 'Nguyễn Tuấn Kiệt (Hồ Con Rùa)',
+      name: 'Nguyễn Tuấn Kiệt (Ngã ba Phan Trọng Tuệ)',
       phone: '0988888884',
-      lat: 10.782635,
-      lng: 106.697415,
+      lat: 20.9515,
+      lng: 105.8368,
     },
   ];
 

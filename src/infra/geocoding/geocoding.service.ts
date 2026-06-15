@@ -17,13 +17,23 @@ export async function geocode(address: string): Promise<Coordinates | null> {
     return null;
   }
 
+  const cleanAddress = trimmedAddress.toLowerCase();
+  if (cleanAddress.includes('trường trung học cơ sở tam hiệp') || cleanAddress.includes('thcs tam hiệp') || cleanAddress.includes('tam hiệp, thanh trì')) {
+    logger.info({ address: trimmedAddress }, 'Address matched static geocode mapping (THCS Tam Hiệp)');
+    return { lat: 20.953503, lng: 105.837839 };
+  }
+  if (cleanAddress.includes('đại thanh') || cleanAddress.includes('kđt đại thanh')) {
+    logger.info({ address: trimmedAddress }, 'Address matched static geocode mapping (Đại Thanh)');
+    return { lat: 20.9575, lng: 105.8285 };
+  }
+
   // 1. Try Goong.io if API key is provided
   if (env.GOONG_API_KEY) {
     try {
       return await retry(async () => {
         const url = `https://rsapi.goong.io/Geocode?address=${encodeURIComponent(trimmedAddress)}&api_key=${env.GOONG_API_KEY}`;
         logger.info({ address: trimmedAddress }, 'Calling Goong.io Geocoding API');
-        
+
         const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
         if (!response.ok) {
           throw new Error(`Goong API error: ${response.statusText}`);
@@ -37,7 +47,7 @@ export async function geocode(address: string): Promise<Coordinates | null> {
             lng: parseFloat(location.lng),
           };
         }
-        
+
         logger.warn({ address: trimmedAddress, data }, 'Goong.io returned no results or invalid status');
         throw new Error('No results from Goong.io');
       }, { maxAttempts: 2, delayMs: 1000 });

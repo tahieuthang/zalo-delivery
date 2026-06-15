@@ -9,9 +9,9 @@ async function main() {
 
   // Tạo shippers mẫu
   const shippers = [
-    { id: ulid(), name: 'Nguyễn Văn An', phone: '0901111111', vehicleType: 'motorbike' },
-    { id: ulid(), name: 'Trần Thị Bình', phone: '0902222222', vehicleType: 'motorbike' },
-    { id: ulid(), name: 'Lê Văn Cường', phone: '0903333333', vehicleType: 'bicycle' },
+    { id: ulid(), name: 'Nguyễn Văn An (Ngõ 186 Đ. Phan Trọng Tuệ, Huỳnh Cung, Thanh Trì, Hà Nội, Việt Nam)', phone: '0977044573', vehicleType: 'motorbike' },
+    { id: ulid(), name: 'Trần Thị Bình (XR5F+H3V, P. Bằng Liệt, Khu đô thị Tây Nam Linh Đàm, Hoàng Liệt, Hà Nội, Việt Nam)', phone: '0977044573', vehicleType: 'motorbike' },
+    { id: ulid(), name: 'Lê Văn Cường (32 P. Linh Đường, Hoàng Liệt, Hà Nội, Việt Nam)', phone: '0977044573', vehicleType: 'bicycle' },
   ];
 
   for (const shipper of shippers) {
