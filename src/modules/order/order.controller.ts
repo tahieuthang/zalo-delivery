@@ -142,3 +142,36 @@ orderRouter.get(
     }
   },
 );
+
+/**
+ * @openapi
+ * /api/orders/{id}/items:
+ *   get:
+ *     summary: Get items of a specific order
+ *     description: Retrieve the list of parsed products/items (e.g. quantity, name, note) for an order.
+ *     tags:
+ *       - Order
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Order ID
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Order not found
+ */
+orderRouter.get(
+  '/:id/items',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await orderService.getOrderById(req.params.id);
+      res.status(200).json({ data: result.items || [] });
+    } catch (err) {
+      next(err);
+    }
+  },
+);

@@ -12,7 +12,8 @@ import logger from '@shared/logger/logger';
  * Creates a new order by geocoding addresses, saving to PostgreSQL, and publishing a Kafka event.
  */
 export async function createOrder(input: CreateOrderInput): Promise<OrderResponse> {
-  logger.info({ customerId: input.customerId }, 'Processing order creation');
+  const resolvedCustomerId = input.customerId || `guest_${ulid()}`;
+  logger.info({ customerId: resolvedCustomerId }, 'Processing order creation');
 
   // 1. Geocode pickup and delivery addresses to coordinates
   const pickupCoords = await geocode(input.pickupAddress);
@@ -39,7 +40,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderRespons
   const orderId = ulid();
   const order = await orderRepo.create({
     id: orderId,
-    customerId: input.customerId,
+    customerId: resolvedCustomerId,
     pickupAddress: input.pickupAddress,
     pickupLat: pickupCoords.lat,
     pickupLng: pickupCoords.lng,
@@ -48,6 +49,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderRespons
     deliveryLng: deliveryCoords.lng,
     status: 'PENDING',
     note: input.note || null,
+    items: input.items ? (input.items as any) : null,
   });
 
   logger.info({ orderId: order.id }, 'Order saved in PostgreSQL database');
@@ -101,6 +103,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderRespons
     status: order.status as OrderStatus,
     note: order.note,
     createdAt: order.createdAt.toISOString(),
+    items: order.items,
   };
 }
 
@@ -125,13 +128,14 @@ export async function getOrderById(id: string): Promise<OrderDetailResponse> {
     status: order.status as OrderStatus,
     note: order.note,
     createdAt: order.createdAt.toISOString(),
+    items: order.items,
     shipper: order.shipper
       ? {
-          id: order.shipper.id,
-          name: order.shipper.name,
-          phone: order.shipper.phone,
-          vehicleType: order.shipper.vehicleType,
-        }
+        id: order.shipper.id,
+        name: order.shipper.name,
+        phone: order.shipper.phone,
+        vehicleType: order.shipper.vehicleType,
+      }
       : null,
     trajectoryCount: order._count.trajectory,
     revenues: order.revenues.map((r) => ({
@@ -143,16 +147,17 @@ export async function getOrderById(id: string): Promise<OrderDetailResponse> {
     })),
     offerLogs: (order as any).offerLogs
       ? (order as any).offerLogs.map((log: any) => ({
-          id: log.id,
-          shipperId: log.shipperId,
-          status: log.status,
-          createdAt: log.createdAt.toISOString(),
-          updatedAt: log.updatedAt.toISOString(),
-          shipper: {
-            name: log.shipper.name,
-            phone: log.shipper.phone,
-          },
-        }))
+        id: log.id,
+        shipperId: log.shipperId,
+        status: log.status,
+        createdAt: log.createdAt.toISOString(),
+        updatedAt: log.updatedAt.toISOString(),
+        shipper: {
+          id: log.shipperId,
+          name: log.shipper.name,
+          phone: log.shipper.phone,
+        },
+      }))
       : [],
   };
 }
@@ -246,6 +251,7 @@ export async function getOrders(filter: {
       status: order.status as OrderStatus,
       note: order.note,
       createdAt: order.createdAt.toISOString(),
+      items: order.items,
     })),
     meta: {
       total,

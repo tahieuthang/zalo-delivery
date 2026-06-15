@@ -1,10 +1,15 @@
 import { z } from 'zod';
 
 export const CreateOrderDto = z.object({
-  customerId: z.string().min(1),
+  customerId: z.string().optional(),
   pickupAddress: z.string().min(3),
   deliveryAddress: z.string().min(3),
   note: z.string().optional(),
+  items: z.array(z.object({
+    name: z.string(),
+    quantity: z.number(),
+    note: z.string().optional(),
+  })).optional(),
 });
 
 export const OrderResponseDto = z.object({
@@ -27,6 +32,7 @@ export const OrderResponseDto = z.object({
   ]),
   note: z.string().nullable(),
   createdAt: z.string(),
+  items: z.any().nullable().optional(), // Using z.any() for easy handling of Json fields from Prisma
 });
 
 // Event Schema for order.created Kafka event (Version 1)
@@ -77,6 +83,7 @@ export const OrderDetailResponseDto = OrderResponseDto.extend({
       createdAt: z.string(),
       updatedAt: z.string(),
       shipper: z.object({
+        id: z.string(),
         name: z.string(),
         phone: z.string(),
       }),
