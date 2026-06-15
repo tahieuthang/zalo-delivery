@@ -32,14 +32,16 @@ services:
     image: apache/kafka:3.8.0
     ports:
       - '9092:9092'
+      - '9094:9094'
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_LOG_DIRS: /tmp/kraft-logs
       CLUSTER_ID: 'zalo-delivery-cluster-001'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -65,6 +67,62 @@ services:
   #   volumes:
   #     - ./osrm-data:/data
   #   command: osrm-routed --algorithm mld /data/vietnam-latest.osrm
+
+  # Backend Application Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    restart: on-failure
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/zalo_delivery?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKER=kafka:9094
+      - OSRM_URL=https://router.project-osrm.org
+      - GOONG_API_KEY=your_goong_api_key_here
+      - ZALO_OA_ID=your_zalo_oa_id
+      - ZALO_APP_ID=your_zalo_app_id
+      - ZALO_APP_SECRET=your_zalo_app_secret
+      - NOTIFICATION_PROVIDER=zalo
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npx ts-node -r tsconfig-paths/register scripts/shipper-simulator.ts
+    restart: on-failure
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/zalo_delivery?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKER=kafka:9094
+      - OSRM_URL=https://router.project-osrm.org
+      - GOONG_API_KEY=your_goong_api_key_here
+      - SOCKET_TOKEN=zalo-delivery-secret-token
+      - SOCKET_URL=http://app:3000/tracking
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      app:
+        condition: service_started
 
 volumes:
   pgdata:

@@ -9,7 +9,7 @@ import { OrderAssignedEventSchema } from '@modules/dispatcher/dispatcher.dto';
 import logger from '@shared/logger/logger';
 import { env } from '@config/env.config';
 
-const SOCKET_URL = `http://localhost:${env.PORT}/tracking`;
+const SOCKET_URL = process.env.SOCKET_URL || `http://localhost:${env.PORT}/tracking`;
 const SIMULATION_INTERVAL_MS = 2000; // 2 seconds
 
 // Map to track active intervals for each order: orderId -> Interval
@@ -90,8 +90,8 @@ async function startShipperSimulation(orderId: string, shipperId: string) {
     }
 
     // 2. Fetch shipper location from Redis Geo (fallback if not set)
-    let shipperLng = 106.695; // District 1 center default
-    let shipperLat = 10.775;
+    let shipperLng = 105.837839; // THCS Tam Hiep center default
+    let shipperLat = 20.953503;
     const pos = await redis.geopos('shipper:locations', shipperId);
     if (pos && pos[0] && pos[0][0] && pos[0][1]) {
       shipperLng = parseFloat(pos[0][0]);
