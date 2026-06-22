@@ -41,6 +41,8 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderRespons
   const order = await orderRepo.create({
     id: orderId,
     customerId: resolvedCustomerId,
+    customerName: input.customerName || null,
+    customerPhone: input.customerPhone || null,
     pickupAddress: input.pickupAddress,
     pickupLat: pickupCoords.lat,
     pickupLng: pickupCoords.lng,
@@ -94,6 +96,8 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderRespons
   return {
     id: order.id,
     customerId: order.customerId,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
     pickupAddress: order.pickupAddress,
     pickupLat: order.pickupLat,
     pickupLng: order.pickupLng,
@@ -119,6 +123,8 @@ export async function getOrderById(id: string): Promise<OrderDetailResponse> {
   return {
     id: order.id,
     customerId: order.customerId,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
     pickupAddress: order.pickupAddress,
     pickupLat: order.pickupLat,
     pickupLng: order.pickupLng,
@@ -242,6 +248,8 @@ export async function getOrders(filter: {
     data: data.map((order) => ({
       id: order.id,
       customerId: order.customerId,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
       pickupAddress: order.pickupAddress,
       pickupLat: order.pickupLat,
       pickupLng: order.pickupLng,

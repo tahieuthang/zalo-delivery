@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 export const CreateOrderDto = z.object({
   customerId: z.string().optional(),
+  customerName: z.string().optional(),
+  customerPhone: z.string().optional(),
   pickupAddress: z.string().min(3),
   deliveryAddress: z.string().min(3),
   note: z.string().optional(),
@@ -15,6 +17,8 @@ export const CreateOrderDto = z.object({
 export const OrderResponseDto = z.object({
   id: z.string(),
   customerId: z.string(),
+  customerName: z.string().nullable().optional(),
+  customerPhone: z.string().nullable().optional(),
   pickupAddress: z.string(),
   pickupLat: z.number().nullable(),
   pickupLng: z.number().nullable(),
