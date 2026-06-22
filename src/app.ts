@@ -36,10 +36,28 @@ export function createApp() {
   // Apply rate limiter to webhook endpoint paths
   app.use('/api/webhooks', webhookLimiter);
 
-  // Zalo Domain Verification Route
-  app.get('/zalo_verifierSz6GDeNzA6zwwuPeczWJS4tkmrMXc1O3DZ8v.html', (req, res) => {
+  // Zalo Domain Verification Route (Dynamic)
+  app.get('/zalo_verifier:token.html', (req, res) => {
+    const { token } = req.params;
     res.setHeader('Content-Type', 'text/html');
-    res.send('Sz6GDeNzA6zwwuPeczWJS4tkmrMXc1O3DZ8v');
+    res.send(token);
+  });
+
+  // Root route for alive check & Zalo meta verification
+  app.get('/', (req, res) => {
+    res.setHeader('Content-Type', 'text/html');
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta name="zalo-platform-site-verification" content="Sz6GDeNzA6zwwuPeczWJS4tkmrMXc1O3DZ8v" />
+          <title>Zalo Delivery System</title>
+        </head>
+        <body>
+          <h1>Zalo Delivery System Online</h1>
+        </body>
+      </html>
+    `);
   });
 
   // Routes
