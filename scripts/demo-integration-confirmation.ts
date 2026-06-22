@@ -82,10 +82,10 @@ async function main() {
 
   // 2. Định nghĩa tọa độ thực tại Trường THCS Tam Hiệp, Thanh Trì, Hà Nội
   // Điểm lấy hàng: Trường Trung học cơ sở Tam Hiệp (Huỳnh Cung, Đại Thanh, Hà Nội)
-  const pickup = { lat: 20.953503, lng: 105.837839, address: 'Trường Trung học cơ sở Tam Hiệp (Huỳnh Cung, Đại Thanh, Hà Nội)' };
+  const pickup = { lat: 20.950203, lng: 105.830421, address: 'Trường Trung học cơ sở Tam Hiệp (Huỳnh Cung, Đại Thanh, Hà Nội)' };
 
   // Điểm giao hàng: Chung cư Đại Thanh
-  const delivery = { lat: 20.9575, lng: 105.8285, address: 'Chung cư Đại Thanh, Thanh Trì, Hà Nội' };
+  const delivery = { lat: 20.957108, lng: 105.806646, address: 'Chung cư Đại Thanh, Thanh Trì, Hà Nội' };
 
   // Danh sách 4 tài xế online tại khu vực lân cận quanh shop
   const testShippers = [
@@ -93,29 +93,29 @@ async function main() {
       id: 'shipper-real-demo',
       name: 'Trần Minh Quân (Sân bóng Huỳnh Cung)',
       phone: '0988888888',
-      lat: 20.9545,
-      lng: 105.8358,
+      lat: 20.9512,
+      lng: 105.8295,
     },
     {
       id: 'shipper-real-demo-2',
       name: 'Phạm Bình Minh (UBND Xã Tam Hiệp)',
       phone: '0988888882',
-      lat: 20.9525,
-      lng: 105.8398,
+      lat: 20.9490,
+      lng: 105.8315,
     },
     {
       id: 'shipper-real-demo-3',
       name: 'Lê Hoàng Nam (Chùa Huỳnh Cung)',
       phone: '0988888883',
-      lat: 20.9555,
-      lng: 105.8388,
+      lat: 20.9520,
+      lng: 105.8325,
     },
     {
       id: 'shipper-real-demo-4',
       name: 'Nguyễn Tuấn Kiệt (Ngã ba Phan Trọng Tuệ)',
       phone: '0988888884',
-      lat: 20.9515,
-      lng: 105.8368,
+      lat: 20.9480,
+      lng: 105.8285,
     },
   ];
 
@@ -179,6 +179,11 @@ async function main() {
       deliveryLat: delivery.lat,
       deliveryLng: delivery.lng,
       customerId: 'customer-demo-id',
+      items: [
+        { name: 'Phở Bò Tái Nạm', quantity: 2, note: 'Ít bánh, nhiều hành' },
+        { name: 'Gỏi Cuốn Tôm Thịt', quantity: 1, note: 'Không lấy nước tương' },
+        { name: 'Trà Đào Cam Sả', quantity: 2, note: 'Ít ngọt' }
+      ]
     },
     create: {
       id: testOrderId,
@@ -190,6 +195,11 @@ async function main() {
       deliveryLat: delivery.lat,
       deliveryLng: delivery.lng,
       customerId: 'customer-demo-id',
+      items: [
+        { name: 'Phở Bò Tái Nạm', quantity: 2, note: 'Ít bánh, nhiều hành' },
+        { name: 'Gỏi Cuốn Tôm Thịt', quantity: 1, note: 'Không lấy nước tương' },
+        { name: 'Trà Đào Cam Sả', quantity: 2, note: 'Ít ngọt' }
+      ]
     },
   });
   console.log(`✅ Đơn hàng #${order.id} được tạo thành công ở trạng thái PENDING`);

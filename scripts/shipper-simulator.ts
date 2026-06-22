@@ -90,8 +90,8 @@ async function startShipperSimulation(orderId: string, shipperId: string) {
     }
 
     // 2. Fetch shipper location from Redis Geo (fallback if not set)
-    let shipperLng = 105.837839; // THCS Tam Hiep center default
-    let shipperLat = 20.953503;
+    let shipperLng = 105.830421; // THCS Tam Hiep center default
+    let shipperLat = 20.950203;
     const pos = await redis.geopos('shipper:locations', shipperId);
     if (pos && pos[0] && pos[0][0] && pos[0][1]) {
       shipperLng = parseFloat(pos[0][0]);
