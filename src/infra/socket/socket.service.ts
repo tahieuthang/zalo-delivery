@@ -94,7 +94,7 @@ export function initSocketServer(server: http.Server): Server {
           lng,
         });
 
-        if (trajectoryBuffer.length >= 10) {
+        if (trajectoryBuffer.length >= 1) {
           await flushTrajectoryBuffer();
         }
 
