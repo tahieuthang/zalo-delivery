@@ -20,11 +20,15 @@ export async function geocode(address: string): Promise<Coordinates | null> {
   const cleanAddress = trimmedAddress.toLowerCase();
   if (cleanAddress.includes('trường trung học cơ sở tam hiệp') || cleanAddress.includes('thcs tam hiệp') || cleanAddress.includes('tam hiệp, thanh trì')) {
     logger.info({ address: trimmedAddress }, 'Address matched static geocode mapping (THCS Tam Hiệp)');
-    return { lat: 20.953503, lng: 105.837839 };
+    return { lat: 20.950203, lng: 105.830421 };
   }
-  if (cleanAddress.includes('đại thanh') || cleanAddress.includes('kđt đại thanh')) {
-    logger.info({ address: trimmedAddress }, 'Address matched static geocode mapping (Đại Thanh)');
-    return { lat: 20.9575, lng: 105.8285 };
+  if (cleanAddress.includes('huỳnh cung') || cleanAddress.includes('168 phan trọng tuệ') || cleanAddress.includes('ngõ 168')) {
+    logger.info({ address: trimmedAddress }, 'Address matched static geocode mapping (Huỳnh Cung)');
+    return { lat: 20.950153, lng: 105.830314 };
+  }
+  if (cleanAddress.includes('chung cư đại thanh') || cleanAddress.includes('kđt đại thanh') || (cleanAddress.includes('đại thanh') && !cleanAddress.includes('huỳnh cung') && !cleanAddress.includes('phan trọng tuệ'))) {
+    logger.info({ address: trimmedAddress }, 'Address matched static geocode mapping (Chung cư Đại Thanh)');
+    return { lat: 20.957108, lng: 105.806646 };
   }
 
   // 1. Try Goong.io if API key is provided
