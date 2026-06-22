@@ -18,7 +18,7 @@ export async function startDispatcherConsumer(): Promise<void> {
     try {
       // Validate incoming message structure using OrderCreatedEventSchema
       const validatedEvent = OrderCreatedEventSchema.parse(message);
-      
+
       logger.info(
         { orderId: validatedEvent.payload.orderId, correlationId: validatedEvent.metadata.correlationId },
         'Received order.created Kafka event in dispatcher consumer',

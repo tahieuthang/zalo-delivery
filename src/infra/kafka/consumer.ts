@@ -29,7 +29,7 @@ export async function runConsumer(
         await handler(parsed);
       } catch (err: any) {
         logger.error({ err, topic: t, partition, offset: message.offset }, 'Consumer handler error');
-        
+
         // Dead Letter Queue (DLQ) logic
         try {
           const dlqTopic = `${t}.dlq`;

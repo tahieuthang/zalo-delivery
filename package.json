@@ -16,7 +16,9 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "ts-node -r tsconfig-paths/register scripts/seed.ts"
+    "db:seed": "ts-node -r tsconfig-paths/register scripts/seed.ts",
+    "test:mock": "ts-node -r tsconfig-paths/register -r dotenv/config scripts/test-mock-flow.ts",
+    "demo:integration": "ts-node -r tsconfig-paths/register scripts/demo-integration-confirmation.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
