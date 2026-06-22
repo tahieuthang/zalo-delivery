@@ -13,7 +13,7 @@ import { getAccessToken } from '@infra/zalo/zalo-token.service';
 import logger from '@shared/logger/logger';
 
 // Default pickup address if not provided in the parsed text message
-const DEFAULT_PICKUP_ADDRESS = '29 Trương Định, Bến Thành, Quận 1, Hồ Chí Minh';
+const DEFAULT_PICKUP_ADDRESS = 'Trường trung học cơ sở Tam Hiệp, Thanh Trì, Hà Nội';
 
 /**
  * Verify webhook signature from Zalo.
@@ -32,11 +32,22 @@ export function verifySignature(
   const rawData = payload.app_id + rawBody + payload.timestamp + env.ZALO_APP_SECRET;
   const computedMac = crypto.createHash('sha256').update(rawData).digest('hex');
 
-  const isValid = computedMac === signature;
+  const cleanSignature = signature.startsWith('mac=') ? signature.slice(4) : signature;
+  const isValid = computedMac === cleanSignature;
 
   if (!isValid) {
     logger.warn(
-      { computedMac, receivedSignature: signature, eventName: payload.event_name },
+      {
+        computedMac,
+        receivedSignature: signature,
+        cleanSignature,
+        appId: payload.app_id,
+        timestamp: payload.timestamp,
+        rawBody,
+        secretKeyLength: env.ZALO_APP_SECRET?.length,
+        secretKeyFirst3: env.ZALO_APP_SECRET?.slice(0, 3),
+        eventName: payload.event_name
+      },
       'Webhook signature verification failed.'
     );
     if (env.NODE_ENV === 'development') {
@@ -221,7 +232,7 @@ export function parseOrderMessage(text: string): ParsedOrder {
   // 4. Fallback to split-based heuristic (e.g. "Nguyễn Văn A - 0912345678 - 123 Lê Lợi Q1")
   if (!name || !deliveryAddress) {
     const parts = cleanText.split(/[-|\n|]+/).map((p) => p.trim()).filter(Boolean);
-    
+
     let detectedName = '';
     let detectedAddress = '';
     let detectedPickup = '';
@@ -450,6 +461,8 @@ export async function processWebhook(
     try {
       const createdOrder = await orderService.createOrder({
         customerId: senderId,
+        customerName: parsed.name || undefined,
+        customerPhone: parsed.phone || undefined,
         pickupAddress: parsed.pickupAddress || DEFAULT_PICKUP_ADDRESS,
         deliveryAddress: parsed.deliveryAddress,
         note: parsed.note,

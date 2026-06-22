@@ -34,9 +34,19 @@ webhookRouter.post(
       const signature = (req.headers['x-zevent-signature'] || '') as string;
       const rawBody = (req as any).rawBody || JSON.stringify(req.body);
 
-      const result = await webhookService.processWebhook(payload, rawBody, signature);
-      
-      res.status(200).json({ data: result });
+      try {
+        const result = await webhookService.processWebhook(payload, rawBody, signature);
+        res.status(200).json({ data: result });
+      } catch (err: any) {
+        if (err && err.statusCode === 403) {
+          res.status(403).json({ error: err.message, code: err.errorCode });
+        } else {
+          // Log parsing/processing failures but return 200 OK to prevent Zalo from deactivating webhook
+          res.status(200).json({
+            data: { processed: false, reason: err.message || 'processing_failed' },
+          });
+        }
+      }
     } catch (err) {
       next(err);
     }
