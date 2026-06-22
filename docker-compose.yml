@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     ports:
       - '5432:5432'
     environment:
@@ -17,6 +18,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - '6379:6379'
     command: redis-server --save 60 1 --loglevel warning
@@ -30,6 +32,7 @@ services:
 
   kafka:
     image: apache/kafka:3.8.0
+    restart: unless-stopped
     ports:
       - '9092:9092'
       - '9094:9094'
@@ -75,19 +78,19 @@ services:
       dockerfile: Dockerfile
     ports:
       - '3000:3000'
-    restart: on-failure
+    restart: unless-stopped
     environment:
       - PORT=3000
-      - NODE_ENV=production
+      - NODE_ENV=${NODE_ENV}
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/zalo_delivery?schema=public
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - KAFKA_BROKER=kafka:9094
       - OSRM_URL=https://router.project-osrm.org
-      - GOONG_API_KEY=your_goong_api_key_here
-      - ZALO_OA_ID=your_zalo_oa_id
-      - ZALO_APP_ID=your_zalo_app_id
-      - ZALO_APP_SECRET=your_zalo_app_secret
+      - GOONG_API_KEY=${GOONG_API_KEY}
+      - ZALO_OA_ID=${ZALO_OA_ID}
+      - ZALO_APP_ID=${ZALO_APP_ID}
+      - ZALO_APP_SECRET=${ZALO_APP_SECRET}
       - NOTIFICATION_PROVIDER=zalo
     depends_on:
       postgres:
@@ -102,16 +105,16 @@ services:
       context: .
       dockerfile: Dockerfile
     command: npx ts-node -r tsconfig-paths/register scripts/shipper-simulator.ts
-    restart: on-failure
+    restart: unless-stopped
     environment:
       - PORT=3000
-      - NODE_ENV=production
+      - NODE_ENV=${NODE_ENV}
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/zalo_delivery?schema=public
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - KAFKA_BROKER=kafka:9094
       - OSRM_URL=https://router.project-osrm.org
-      - GOONG_API_KEY=your_goong_api_key_here
+      - GOONG_API_KEY=${GOONG_API_KEY}
       - SOCKET_TOKEN=zalo-delivery-secret-token
       - SOCKET_URL=http://app:3000/tracking
     depends_on:
